@@ -16,6 +16,10 @@ filter:
     - logout
     - oidcGenerateState
     - oidcHandleMobileCallback
+    - loginRemote
+    - getSetupStatus
+    - setupFirstUser
+    - changePassword
     - getMyself
     # Catalog (app API)
     - appGetLibraries

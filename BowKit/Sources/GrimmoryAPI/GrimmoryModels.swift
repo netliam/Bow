@@ -3,9 +3,13 @@ import Foundation
 /// What Bow learns about a server before signing in.
 public struct GrimmoryServerInfo: Sendable, Equatable {
     public var version: String?
+    /// No account exists yet. The first one is created with `createFirstAdmin`.
+    public var needsSetup: Bool
     public var oidc: OIDCProvider?
     /// Password login is hidden when the admin forces OIDC-only sign-in.
     public var passwordLoginAllowed: Bool
+    /// A reverse proxy authenticates users and passes who they are in headers (`signInWithRemoteAuth`).
+    public var remoteAuthEnabled: Bool
 
     public struct OIDCProvider: Sendable, Equatable {
         public var name: String?

@@ -33,7 +33,8 @@ actor FakeGrimmory: ClientTransport {
                                 authorization: request.headerFields[.authorization], body: text)
         let (status, json) = try await handle(recorded)
         var response = HTTPResponse(status: .init(code: status))
-        response.headerFields[.contentType] = "application/json"
+        // A body starting with `<` is a web page, as an auth proxy's sign-in page would be.
+        response.headerFields[.contentType] = json.hasPrefix("<") ? "text/html; charset=utf-8" : "application/json"
         return (response, HTTPBody(json))
     }
 

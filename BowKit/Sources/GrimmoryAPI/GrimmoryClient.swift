@@ -5,18 +5,24 @@ import OpenAPIURLSession
 /// Bow's entry point to one Grimmory account. Wraps the generated client (internal) and maps its loosely typed
 /// DTOs (everything optional, as Spring's spec declares them) into Bow's domain types.
 public final class GrimmoryClient: Sendable {
+    public typealias URLLoader = @Sendable (URL) async throws -> Data
+
     public let serverURL: URL
-    private let client: Client
-    private let session: GrimmorySession
+    let client: Client
+    let session: GrimmorySession
+    /// Fetches non-Grimmory URLs (the identity provider's OIDC discovery document).
+    let loadURL: URLLoader
 
     /// - Parameter serverURL: The server root, e.g. `https://books.example.com` (no `/api`).
     public init(
         serverURL: URL,
         tokenStore: any GrimmoryTokenStore,
         transport: any ClientTransport = URLSessionTransport(),
+        loadURL: @escaping URLLoader = GrimmoryClient.loadOverHTTP,
         now: @escaping @Sendable () -> Date = Date.init
     ) {
         self.serverURL = serverURL
+        self.loadURL = loadURL
         let configuration = Configuration(dateTranscoder: GrimmoryDateTranscoder())
 
         // Refreshing goes through a client without the auth middleware, so it can't recurse into itself.
@@ -48,19 +54,41 @@ public final class GrimmoryClient: Sendable {
             version = try versionOK.body.json.current
         }
 
+        var needsSetup = false
+        if case .ok(let setupOK) = try await unwrapped { try await client.getSetupStatus() } {
+            needsSetup = try setupOK.body.json.data == false
+        }
+
         var oidc: GrimmoryServerInfo.OIDCProvider?
         if settings.oidcEnabled == true,
            let details = settings.oidcProviderDetails,
            let issuer = details.issuerUri.flatMap(URL.init(string:)),
            let clientID = details.clientId {
             oidc = .init(name: details.providerName, issuer: issuer, clientID: clientID,
-                         scopes: details.scopes ?? "openid profile email offline_access")
+                         scopes: details.scopes.flatMap { $0.isEmpty ? nil : $0 } ?? Self.defaultOIDCScopes)
         }
         return GrimmoryServerInfo(
             version: version,
+            needsSetup: needsSetup,
             oidc: oidc,
-            passwordLoginAllowed: !(settings.oidcEnabled == true && settings.oidcForceOnlyMode == true)
+            passwordLoginAllowed: !(settings.oidcEnabled == true && settings.oidcForceOnlyMode == true),
+            remoteAuthEnabled: settings.remoteAuthEnabled ?? false
         )
+    }
+
+    /// The scopes Grimmory's web app asks for when the admin didn't set any.
+    static let defaultOIDCScopes = "openid profile email groups offline_access"
+
+    /// Creates the first (admin) account on a server that has none yet (`serverInfo().needsSetup`), then signs in.
+    @discardableResult
+    public func createFirstAdmin(username: String, name: String, email: String, password: String) async throws
+        -> GrimmoryUser {
+        let output = try await unwrapped {
+            try await client.setupFirstUser(body: .json(.init(email: email, name: name, password: password,
+                                                              username: username)))
+        }
+        guard case .ok = output else { throw GrimmoryError(status: statusCode(of: output)) }
+        return try await signIn(username: username, password: password)
     }
 
     // MARK: Account
@@ -73,19 +101,49 @@ public final class GrimmoryClient: Sendable {
     public func signIn(username: String, password: String) async throws -> GrimmoryUser {
         let output = try await unwrapped { try await client.loginUser(body: .json(.init(password: password, username: username))) }
         guard case .ok(let ok) = output else { throw GrimmoryError(status: statusCode(of: output)) }
-        let dto = try ok.body.json
+        return try await finishSignIn(try ok.body.json)
+    }
+
+    /// Signs in as the user a reverse proxy (Authelia, Authentik, …) vouches for with its headers, when the
+    /// server has remote auth on (`serverInfo().remoteAuthEnabled`). The request must reach Grimmory through the
+    /// proxy with the proxy's session, so the app signs in to the proxy first (in a web view) and shares its
+    /// cookies with the transport. Throws `.forbidden` if remote auth is off.
+    @discardableResult
+    public func signInWithRemoteAuth() async throws -> GrimmoryUser {
+        let output = try await unwrapped { try await client.loginRemote() }
+        guard case .ok(let ok) = output else { throw GrimmoryError(status: statusCode(of: output)) }
+        return try await finishSignIn(try ok.body.json)
+    }
+
+    /// Stores the tokens from any sign-in method and loads the user.
+    func finishSignIn(_ dto: Components.Schemas.AccessTokenDto) async throws -> GrimmoryUser {
         try await session.setTokens(try Self.tokens(from: dto, now: Date()))
         var user = try await currentUser()
-        user.hasDefaultPassword = dto.isDefaultPassword ?? false
+        user.hasDefaultPassword = user.hasDefaultPassword || (dto.isDefaultPassword ?? false)
         return user
     }
 
+    /// For accounts still on the password an admin set (`GrimmoryUser.hasDefaultPassword`).
+    public func changePassword(current: String, new: String) async throws {
+        let output = try await unwrapped {
+            try await client.changePassword(body: .json(.init(currentPassword: current, newPassword: new)))
+        }
+        guard case .ok = output else { throw GrimmoryError(status: statusCode(of: output)) }
+    }
+
     /// Revokes the session on the server when it can, and always forgets the tokens locally.
-    public func signOut() async throws {
-        if let tokens = try? await session.tokens() {
-            _ = try? await client.logout(body: .json(.init(refreshToken: tokens.refreshToken)))
+    ///
+    /// - Returns: For OIDC accounts, the identity provider's end-session URL, if Grimmory built one. Opening it
+    ///   ends the provider session too; otherwise the next OIDC sign-in may go straight through.
+    @discardableResult
+    public func signOut() async throws -> URL? {
+        var providerLogoutURL: URL?
+        if let tokens = try? await session.tokens(),
+           case .ok(let ok)? = try? await client.logout(body: .json(.init(refreshToken: tokens.refreshToken))) {
+            providerLogoutURL = (try? ok.body.json.logoutUrl).flatMap { $0 }.flatMap(URL.init(string:))
         }
         try await session.clear()
+        return providerLogoutURL
     }
 
     public func currentUser() async throws -> GrimmoryUser {
@@ -134,6 +192,15 @@ public final class GrimmoryClient: Sendable {
 
     // MARK: Mapping
 
+    /// The default `loadURL`: a plain GET that fails on non-2xx.
+    public static let loadOverHTTP: URLLoader = { url in
+        let (data, response) = try await URLSession.shared.data(from: url)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw GrimmoryError.http(status: (response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+        return data
+    }
+
     static func tokens(from dto: Components.Schemas.AccessTokenDto, now: Date) throws -> GrimmoryTokens {
         guard let access = dto.accessToken, let refresh = dto.refreshToken else {
             throw GrimmoryError.unexpectedResponse("token response without tokens")
@@ -166,7 +233,7 @@ public final class GrimmoryClient: Sendable {
 
 /// Runs a generated call, unwrapping the `ClientError` OpenAPIRuntime wraps around everything thrown inside it,
 /// so callers see `GrimmoryError.signedOut` (and others) as themselves.
-private func unwrapped<T>(_ call: () async throws -> T) async throws -> T {
+func unwrapped<T>(_ call: () async throws -> T) async throws -> T {
     do {
         return try await call()
     } catch let error as ClientError {
@@ -174,11 +241,20 @@ private func unwrapped<T>(_ call: () async throws -> T) async throws -> T {
     }
 }
 
-/// The status code of a generated `Output` that isn't `.ok`. Every generated output carries it in
-/// `.undocumented(statusCode:_:)`, since Grimmory's spec documents only the 200 responses.
-private func statusCode(of output: some Sendable) -> Int {
-    guard let child = Mirror(reflecting: output).children.first, child.label == "undocumented",
-          let code = Mirror(reflecting: child.value).children.first?.value as? Int
-    else { return 0 }
-    return code
+/// The status code of a generated `Output` that isn't `.ok`. Most of Grimmory's spec documents only 200, so
+/// errors arrive as `.undocumented(statusCode:_:)`; the few documented ones get named cases like `.forbidden`.
+func statusCode(of output: some Sendable) -> Int {
+    guard let child = Mirror(reflecting: output).children.first, let label = child.label else { return 0 }
+    if label == "undocumented" {
+        return Mirror(reflecting: child.value).children.first?.value as? Int ?? 0
+    }
+    return documentedStatusCodes[label] ?? 0
 }
+
+/// swift-openapi-generator's case names for documented status codes.
+private let documentedStatusCodes: [String: Int] = [
+    "ok": 200, "created": 201, "accepted": 202, "noContent": 204,
+    "badRequest": 400, "unauthorized": 401, "forbidden": 403, "notFound": 404, "conflict": 409,
+    "unprocessableContent": 422, "tooManyRequests": 429,
+    "internalServerError": 500, "badGateway": 502, "serviceUnavailable": 503,
+]

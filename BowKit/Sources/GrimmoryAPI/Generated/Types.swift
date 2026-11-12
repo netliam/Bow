@@ -107,6 +107,13 @@ internal protocol APIProtocol: Sendable {
     /// - Remark: HTTP `POST /api/v1/auth/refresh`.
     /// - Remark: Generated from `#/paths//api/v1/auth/refresh/post(refreshToken)`.
     func refreshToken(_ input: Operations.RefreshToken.Input) async throws -> Operations.RefreshToken.Output
+    /// Remote login
+    ///
+    /// Authenticate a user using remote authentication headers.
+    ///
+    /// - Remark: HTTP `GET /api/v1/auth/remote`.
+    /// - Remark: Generated from `#/paths//api/v1/auth/remote/get(loginRemote)`.
+    func loginRemote(_ input: Operations.LoginRemote.Input) async throws -> Operations.LoginRemote.Output
     /// Get a ping response
     ///
     /// Check if the application is responding
@@ -121,6 +128,27 @@ internal protocol APIProtocol: Sendable {
     /// - Remark: HTTP `GET /api/v1/public-settings`.
     /// - Remark: Generated from `#/paths//api/v1/public-settings/get(getPublicSettings)`.
     func getPublicSettings(_ input: Operations.GetPublicSettings.Input) async throws -> Operations.GetPublicSettings.Output
+    /// Setup first user
+    ///
+    /// Provision the initial admin user during setup.
+    ///
+    /// - Remark: HTTP `POST /api/v1/setup`.
+    /// - Remark: Generated from `#/paths//api/v1/setup/post(setupFirstUser)`.
+    func setupFirstUser(_ input: Operations.SetupFirstUser.Input) async throws -> Operations.SetupFirstUser.Output
+    /// Get setup status
+    ///
+    /// Check if initial setup has been completed.
+    ///
+    /// - Remark: HTTP `GET /api/v1/setup/status`.
+    /// - Remark: Generated from `#/paths//api/v1/setup/status/get(getSetupStatus)`.
+    func getSetupStatus(_ input: Operations.GetSetupStatus.Input) async throws -> Operations.GetSetupStatus.Output
+    /// Change password
+    ///
+    /// Change the password for the current user.
+    ///
+    /// - Remark: HTTP `PUT /api/v1/users/change-password`.
+    /// - Remark: Generated from `#/paths//api/v1/users/change-password/put(changePassword)`.
+    func changePassword(_ input: Operations.ChangePassword.Input) async throws -> Operations.ChangePassword.Output
     /// Get current user
     ///
     /// Retrieve the profile of the currently authenticated user.
@@ -359,6 +387,15 @@ extension APIProtocol {
             body: body
         ))
     }
+    /// Remote login
+    ///
+    /// Authenticate a user using remote authentication headers.
+    ///
+    /// - Remark: HTTP `GET /api/v1/auth/remote`.
+    /// - Remark: Generated from `#/paths//api/v1/auth/remote/get(loginRemote)`.
+    internal func loginRemote(headers: Operations.LoginRemote.Input.Headers = .init()) async throws -> Operations.LoginRemote.Output {
+        try await loginRemote(Operations.LoginRemote.Input(headers: headers))
+    }
     /// Get a ping response
     ///
     /// Check if the application is responding
@@ -376,6 +413,45 @@ extension APIProtocol {
     /// - Remark: Generated from `#/paths//api/v1/public-settings/get(getPublicSettings)`.
     internal func getPublicSettings(headers: Operations.GetPublicSettings.Input.Headers = .init()) async throws -> Operations.GetPublicSettings.Output {
         try await getPublicSettings(Operations.GetPublicSettings.Input(headers: headers))
+    }
+    /// Setup first user
+    ///
+    /// Provision the initial admin user during setup.
+    ///
+    /// - Remark: HTTP `POST /api/v1/setup`.
+    /// - Remark: Generated from `#/paths//api/v1/setup/post(setupFirstUser)`.
+    internal func setupFirstUser(
+        headers: Operations.SetupFirstUser.Input.Headers = .init(),
+        body: Operations.SetupFirstUser.Input.Body
+    ) async throws -> Operations.SetupFirstUser.Output {
+        try await setupFirstUser(Operations.SetupFirstUser.Input(
+            headers: headers,
+            body: body
+        ))
+    }
+    /// Get setup status
+    ///
+    /// Check if initial setup has been completed.
+    ///
+    /// - Remark: HTTP `GET /api/v1/setup/status`.
+    /// - Remark: Generated from `#/paths//api/v1/setup/status/get(getSetupStatus)`.
+    internal func getSetupStatus(headers: Operations.GetSetupStatus.Input.Headers = .init()) async throws -> Operations.GetSetupStatus.Output {
+        try await getSetupStatus(Operations.GetSetupStatus.Input(headers: headers))
+    }
+    /// Change password
+    ///
+    /// Change the password for the current user.
+    ///
+    /// - Remark: HTTP `PUT /api/v1/users/change-password`.
+    /// - Remark: Generated from `#/paths//api/v1/users/change-password/put(changePassword)`.
+    internal func changePassword(
+        headers: Operations.ChangePassword.Input.Headers = .init(),
+        body: Operations.ChangePassword.Input.Body
+    ) async throws -> Operations.ChangePassword.Output {
+        try await changePassword(Operations.ChangePassword.Input(
+            headers: headers,
+            body: body
+        ))
     }
     /// Get current user
     ///

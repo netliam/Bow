@@ -59,31 +59,82 @@ Legacy/other protocols, which Bow doesn't use: OPDS (`/api/v1/opds`, `/api/v2/op
 
 ## Auth
 
-| Call | Request → response |
-|---|---|
-| `GET /api/v1/public-settings` | No auth. `{remoteAuthEnabled, oidcEnabled, oidcForceOnlyMode, oidcProviderDetails}`. Call it first to decide which login UI to show. |
-| `POST /api/v1/auth/login` | `{username, password}` → `AccessTokenDto {accessToken, refreshToken, expires, isDefaultPassword?}` |
-| `POST /api/v1/auth/refresh` | `{refreshToken}` → new `AccessTokenDto` |
-| `POST /api/v1/auth/logout` | Revokes the session |
-| `GET /api/v1/auth/oidc/state` | Server-issued `state` for OIDC |
-| `POST /api/v1/auth/oidc/mobile/callback` | Query params `code, code_verifier, redirect_uri, nonce, state` → `AccessTokenDto` |
-| `GET /api/v1/users/me` | Current user with the **full** permission set (`BookLoreUser`). Bow uses this one. |
-| `GET /api/v1/app/users/me` | Only `admin`, `canUpload`, `canDownload`, `canAccessBookdrop`, `maxFileUploadSizeMb`. Too little for gating the UI. |
+Grimmory has four ways in, and Bow supports all of them (`GrimmoryClient`, in `BowKit/Sources/GrimmoryAPI`).
+Every one ends with the same Grimmory access and refresh tokens.
 
-- **Lifetimes:** the access token lasts **2 hours** (`expires` is in seconds). The refresh token lasts **30 days**.
-- **Refresh tokens rotate.** Each refresh revokes the old token (`RefreshTokenService.refresh`). Bow must
-  **single-flight** refreshes: one in-flight refresh, with every other request waiting on it. Otherwise two
-  concurrent 401s will log the user out.
+| Method | When | Grimmory calls | `GrimmoryClient` |
+|---|---|---|---|
+| **First-run setup** | `GET /api/v1/setup/status` → `data: false` (no users yet) | `POST /api/v1/setup` `{username, name, email, password}`, then password login | `serverInfo().needsSetup`, `createFirstAdmin(…)` |
+| **Password** | Unless the admin forces OIDC-only | `POST /api/v1/auth/login` `{username, password}` | `signIn(username:password:)` |
+| **OIDC** | `public-settings.oidcEnabled` | `GET /api/v1/auth/oidc/state`, the provider's authorize endpoint, then `POST /api/v1/auth/oidc/mobile/callback?code&code_verifier&redirect_uri&nonce&state` | `beginOIDCSignIn(provider:)`, `completeOIDCSignIn(_:callbackURL:)` |
+| **Remote (proxy) auth** | `public-settings.remoteAuthEnabled` | `GET /api/v1/auth/remote`, with the reverse proxy adding the user headers | `signInWithRemoteAuth()` |
+
+Before any of them, `GET /api/v1/public-settings` (no auth) returns
+`{remoteAuthEnabled, oidcEnabled, oidcForceOnlyMode, oidcProviderDetails{providerName, clientId, issuerUri, scopes}}`.
+`serverInfo()` turns that into what the sign-in screen needs.
+
+### OIDC
+
+Bow's flow matches the web app's (`frontend/.../oidc.service.ts`), using Grimmory's native-app callback:
+
+1. **State:** `GET /oidc/state` returns a one-time `state` issued by the server.
+2. **Authorize URL:** the `authorization_endpoint` comes from `<issuer>/.well-known/openid-configuration`. The URL
+   carries:
+   - `response_type=code`, `client_id`, and `redirect_uri=grimmory://oauth2-callback`
+   - `scope`, which defaults to `openid profile email groups offline_access` like the web app
+   - `code_challenge` (S256) and the `state`
+   - a random `nonce`, which Grimmory checks in the ID token
+3. **Sign-in:** the app opens that URL with `ASWebAuthenticationSession`, listening for callback scheme
+   `grimmory`. It's non-ephemeral, so an existing provider session gives single sign-on. The returned URL goes
+   to `completeOIDCSignIn`.
+4. **Callback checks:** `completeOIDCSignIn` checks that `state` matches and surfaces provider errors
+   (`error_description`). It then posts the code and verifier to `/oidc/mobile/callback`, and Grimmory exchanges
+   the code with the provider using its client secret.
+
+Setup requirements on the server side:
+- **Allowed redirects:** Grimmory accepts native redirect URIs from its allowlist, which defaults to
+  **`grimmory://oauth2-callback`** (plus legacy `booklore://oauth2-callback`). Admins can add more, or `*`.
+  `ASWebAuthenticationSession` catches the scheme itself, so Bow never registers `grimmory://` system-wide.
+- **Provider client:** the identity provider's client must also allow that redirect URI. A Grimmory already set
+  up for its mobile apps has it. If it isn't allowed, the provider shows its own error page and the sign-in
+  sheet never returns.
+- **Not used:** `GET /oidc/redirect` (which sends tokens back in a URL fragment through `app_redirect_uri`) and
+  `POST /oidc/callback` (web origin only).
+
+### Remote (proxy) auth
+
+The admin puts a reverse proxy (Authelia, Authentik, oauth2-proxy, …) in front of Grimmory. The proxy signs the
+user in and adds `Remote-User`-style headers, and `GET /auth/remote` turns those headers into Grimmory tokens. The
+web app calls it at startup.
+
+A native app only gets through the proxy with the proxy's session cookie. So Bow's flow will be:
+1. Open the server in a `WKWebView` sheet so the user signs in to the proxy.
+2. Copy the proxy's cookies for that host into the `URLSession` that `GrimmoryClient` uses.
+3. Call `signInWithRemoteAuth()`.
+
+If remote auth is off, that call returns 403 (`.forbidden`).
+
+Any API call that comes back as a web page throws **`GrimmoryError.webPageInsteadOfAPI`**. That usually means the
+proxy's session expired and it answered with its login page, because URLSession follows the redirect. The app
+shows the proxy sheet again. This also covers servers that sit behind an auth proxy while using password or OIDC
+sign-in, unless the proxy exempts `/api/`.
+
+### Tokens and sign-out
+
+| Call | Notes |
+|---|---|
+| `POST /api/v1/auth/refresh` | `{refreshToken}` → new `AccessTokenDto` |
+| `POST /api/v1/auth/logout` | `{refreshToken}` → `{logoutUrl?}`. For OIDC users, `logoutUrl` is the provider's end-session URL, which Bow can open to end the provider session too. `signOut()` returns it and always clears local tokens. |
+| `PUT /api/v1/users/change-password` | `{currentPassword, newPassword}`. Used when `isDefaultPassword` is true at login (`GrimmoryUser.hasDefaultPassword`); the web app forces this. |
+| `GET /api/v1/users/me` | Current user with the **full** permission set (`BookLoreUser`). Bow uses this one. |
+| `GET /api/v1/app/users/me` | Only `admin`, `canUpload`, `canDownload`, `canAccessBookdrop` and `maxFileUploadSizeMb`. Too little for gating the UI. |
+
+- **Lifetimes:** the access token lasts **2 hours** (`expires` is a lifetime in seconds). The refresh token lasts
+  **30 days**.
+- **Refresh tokens rotate.** Each refresh revokes the old token, so `GrimmorySession` **single-flights**
+  refreshes. A rejected refresh signs the user out, while a network failure keeps the tokens.
 - **Sending the token:** `Authorization: Bearer <accessToken>`. Media, download and EPUB-streaming paths also
-  accept `?token=`. Bow should still use the header, because tokens in URLs end up in logs.
-- **Native OIDC:** Bow runs PKCE against the provider in `oidcProviderDetails` with `ASWebAuthenticationSession`,
-  then posts the code and verifier to `/oidc/mobile/callback`.
-  - **Redirect URI:** the server only accepts mobile redirect URIs from its allowlist, which defaults to
-    **`grimmory://oauth2-callback`** (plus legacy `booklore://oauth2-callback`). Admins can add more, or `*`.
-  - **Why Bow can use the default:** `ASWebAuthenticationSession` catches the callback scheme itself, so Bow can
-    use the default URI without registering `grimmory://` system-wide. It works on a stock server.
-  - **Provider side:** the identity provider's client must also list that redirect URI. A server already set up
-    for Grimmory's mobile login will have it.
+  accept `?token=`. Bow still uses the header, because tokens in URLs end up in logs.
 - **Live revocation:** the WebSocket queue `/queue/session-revoked` reports when a session is revoked.
 
 ### Permissions (gate the UI with these)
