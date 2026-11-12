@@ -187,6 +187,11 @@ import Testing
         await #expect(throws: URLError(.cannotConnectToHost)) { try await client.serverInfo() }
     }
 
+    @Test func errorsReadWell() {
+        #expect(GrimmoryError.notFound.localizedDescription == "The server doesn't have that.")
+        #expect(GrimmoryError.http(status: 502).localizedDescription == "The server returned an error (502).")
+    }
+
     @Test func forbiddenIsReported() async throws {
         let server = FakeGrimmory { _ in (403, "{}") }
         let client = GrimmoryClient(serverURL: Fixtures.server, tokenStore: InMemoryTokenStore(Fixtures.tokens()),

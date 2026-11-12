@@ -6,8 +6,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/netliam/DCEpubReaderKit.git",
       "state" : {
-        "revision" : "f33bfbd75950d5bd7dcb7ab8dedcaad8cf53e732",
-        "version" : "0.1.0"
+        "revision" : "ff2391649bcdb90b940490c1448019b1e21245fd",
+        "version" : "0.2.0"
       }
     },
     {

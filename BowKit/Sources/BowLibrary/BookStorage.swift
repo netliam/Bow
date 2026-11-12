@@ -75,15 +75,3 @@ public struct BookStorage: Sendable {
         }
     }
 }
-
-/// How far through a book a reader is, estimated like Grimmory's web reader (foliate-js) does: each spine item
-/// counts in proportion to its size. Positions inside a chapter count from the chapter's start until the reader
-/// can report a finer position.
-public enum ReadingFraction {
-    public static func estimate(chapterSizes: [Int], spineIndex: Int) -> Double {
-        let total = chapterSizes.reduce(0, +)
-        guard total > 0, spineIndex > 0 else { return 0 }
-        let before = chapterSizes.prefix(min(spineIndex, chapterSizes.count)).reduce(0, +)
-        return min(Double(before) / Double(total), 1)
-    }
-}

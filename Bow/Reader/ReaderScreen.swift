@@ -144,6 +144,9 @@ struct ReaderScreen: View {
         configuration.bookId = book.id.uuidString
         configuration.defaults = UserDefaults(suiteName: "app.bow.reader") ?? .standard
         configuration.onClose = { close() }
+        // Grimmory's styles and colours, so annotations look the same here and in its web reader. The default
+        // menu actions (note, look up, search, copy, share; delete on a highlight) already match it.
+        configuration.highlightMenu.palettes = GrimmoryHighlights.palettes
 
         let view = DCReaderViewBuilder.build(
             epub,
