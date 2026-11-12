@@ -7,10 +7,12 @@
 #   Scripts/grimmory-dev.sh up       start it (first run also creates the admin account and a library)
 #   Scripts/grimmory-dev.sh down     stop it (data is kept)
 #   Scripts/grimmory-dev.sh status   show containers and whether the server answers
+#   Scripts/grimmory-dev.sh rescan   pick up books added to ~/GrimmoryDev/books
 #   Scripts/grimmory-dev.sh logs     follow Grimmory's log
 #   Scripts/grimmory-dev.sh reset    delete everything, including the database and the test account
 #
-# Books: drop EPUBs into ~/GrimmoryDev/books; Grimmory watches that folder.
+# Books: drop EPUBs into ~/GrimmoryDev/books, then run `rescan`. File-change events don't cross from macOS into the
+# Podman VM, so Grimmory's folder watching doesn't see them.
 # Test account and server URL: .grimmory-dev.env at the repo root (gitignored).
 set -euo pipefail
 
@@ -144,6 +146,19 @@ status() {
   if curl -fs -m 3 "$URL/api/v1/healthcheck" >/dev/null 2>&1; then echo "Grimmory is answering at $URL"; else echo "Server not answering at $URL"; fi
 }
 
+rescan() {
+  # shellcheck disable=SC1090
+  source "$ENV_FILE"
+  local token
+  token=$(curl -fsS -X POST "$URL/api/v1/auth/login" -H 'Content-Type: application/json' \
+    -d "{\"username\":\"$GRIMMORY_USERNAME\",\"password\":\"$GRIMMORY_PASSWORD\"}" | json "['accessToken']")
+  for id in $(curl -fsS "$URL/api/v1/libraries" -H "Authorization: Bearer $token" \
+      | python3 -I -c "import json,sys; print(' '.join(str(l['id']) for l in json.load(sys.stdin)))"); do
+    curl -fsS -X PUT "$URL/api/v1/libraries/$id/refresh" -H "Authorization: Bearer $token" >/dev/null
+  done
+  echo "Rescanning. New books show up in a few seconds."
+}
+
 reset() {
   podman pod rm -f "$POD" >/dev/null 2>&1 || true
   podman volume rm -f grimmory-dev-db grimmory-dev-data >/dev/null 2>&1 || true
@@ -156,7 +171,8 @@ case "${1:-up}" in
   up) up ;;
   down) down ;;
   status) status ;;
+  rescan) rescan ;;
   logs) podman logs -f grimmory-dev ;;
   reset) reset ;;
-  *) echo "usage: $0 [up|down|status|logs|reset]" >&2; exit 2 ;;
+  *) echo "usage: $0 [up|down|status|rescan|logs|reset]" >&2; exit 2 ;;
 esac

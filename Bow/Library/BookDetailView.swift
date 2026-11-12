@@ -73,14 +73,21 @@ struct BookDetailView: View {
                 if let subtitle = detail?.subtitle, !subtitle.isEmpty {
                     Text(subtitle).font(.headline).foregroundStyle(.secondary)
                 }
-                if !book.authors.isEmpty {
-                    Text(book.authors.formatted(.list(type: .and)))
-                        .font(.body)
+                ForEach(book.authors, id: \.self) { author in
+                    NavigationLink(value: BookCollection.author(author)) {
+                        Text(author)
+                            .font(.body)
+                            .multilineTextAlignment(.leading)
+                    }
+                    .accessibilityHint("Shows this author's books.")
                 }
                 if let series = book.seriesName {
-                    Text(book.seriesNumber.map { "Book \($0.formatted()) of \(series)" } ?? series)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    NavigationLink(value: BookCollection.series(series)) {
+                        Text(book.seriesNumber.map { "Book \($0.formatted()) of \(series)" } ?? series)
+                            .font(.subheadline)
+                            .multilineTextAlignment(.leading)
+                    }
+                    .accessibilityHint("Shows the series.")
                 }
             }
         }
