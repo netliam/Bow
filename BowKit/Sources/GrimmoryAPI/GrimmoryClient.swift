@@ -52,9 +52,13 @@ public final class GrimmoryClient: Sendable {
         guard case .ok(let ok) = settingsOutput else { throw GrimmoryError(status: statusCode(of: settingsOutput)) }
         let settings = try ok.body.json
 
+        // `/version` needs a signed-in user on current Grimmory; the public healthcheck carries the version too.
         var version: String?
         if case .ok(let versionOK) = try await unwrapped({ try await client.getVersionInfo() }) {
             version = try versionOK.body.json.current
+        }
+        if version == nil, case .ok(let pingOK) = try? await unwrapped({ try await client.getPing() }) {
+            version = try? pingOK.body.json.data?.version
         }
 
         var needsSetup = false

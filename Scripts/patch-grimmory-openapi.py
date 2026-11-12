@@ -87,6 +87,12 @@ def main():
         for field in ("createdAt", "updatedAt"):
             spec["components"]["schemas"][name]["properties"][field].pop("format", None)
 
+    # The healthcheck's timestamps are zone-less with nanoseconds ("2026-11-12T16:53:43.367803709").
+    for name in ("HealthcheckResponse", "SuccessResponseHealthcheckResponse"):
+        props = spec["components"]["schemas"].get(name, {}).get("properties", {})
+        if "timestamp" in props:
+            props["timestamp"].pop("format", None)
+
     # Assigning shelves answers with the full `Book` entities. Bow doesn't read them, and they're the heaviest,
     # least predictable schema in the spec, so don't let decoding them fail a call that already succeeded.
     assign = spec["paths"]["/api/v1/books/shelves"]["post"]["responses"]["200"]["content"]["application/json"]

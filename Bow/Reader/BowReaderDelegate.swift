@@ -20,6 +20,8 @@ final class BowReaderDelegate: DCReaderCoordsProtocol {
     /// Called after a change (position, annotation) is saved and queued for the server.
     private let onChangeQueued: () -> Void
     private var cfiTask: Task<Void, Never>?
+    /// The reader has moved since the book opened. Until it has, its estimates don't replace a counted fraction.
+    private var hasMoved = false
 
     /// Converting to a CFI loads the chapter off screen, so wait for the reader to settle on a page first.
     static let cfiDelay: Duration = .seconds(2)
@@ -46,6 +48,7 @@ final class BowReaderDelegate: DCReaderCoordsProtocol {
         // The reader reports where it opened, too. That isn't reading: pushing it would replace a newer
         // position from another device on the server, and bumping `updatedAt` would hide that position.
         if book.progress?.kitCoords == coords, book.progress?.spineIndex == spineIndex { return }
+        hasMoved = true
         let progress = book.progress ?? {
             let progress = ReadingProgress(book: book)
             context.insert(progress)
@@ -74,6 +77,9 @@ final class BowReaderDelegate: DCReaderCoordsProtocol {
     /// `handleCoords`, so it's in place before the delayed CFI push reads it.
     func handleProgress(book _: DCEpubBook, progress readerProgress: DCReaderProgress) {
         guard let progress = book?.progress else { return }
+        // Until the kit has counted the book's pages, `fraction` is a chapter-based estimate, which can be well off
+        // (12.8% counted, 19% estimated, for the same page). Reopening at the same place keeps the counted figure.
+        if readerProgress.totalPages == nil, !hasMoved, progress.fraction > 0 { return }
         progress.fraction = min(max(readerProgress.fraction, 0), 1)
         try? context.save()
     }

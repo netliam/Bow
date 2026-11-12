@@ -282,6 +282,181 @@ internal struct Client: APIProtocol {
             }
         )
     }
+    /// List app authors
+    ///
+    /// Retrieve paginated authors for the app with optional filtering and sorting.
+    ///
+    /// - Remark: HTTP `GET /api/v1/app/authors`.
+    /// - Remark: Generated from `#/paths//api/v1/app/authors/get(appGetAuthors)`.
+    internal func appGetAuthors(_ input: Operations.AppGetAuthors.Input) async throws -> Operations.AppGetAuthors.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.AppGetAuthors.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/api/v1/app/authors",
+                    parameters: []
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .get
+                )
+                suppressMutabilityWarning(&request)
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "page",
+                    value: input.query.page
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "size",
+                    value: input.query.size
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "sort",
+                    value: input.query.sort
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "dir",
+                    value: input.query.dir
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "libraryId",
+                    value: input.query.libraryId
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "search",
+                    value: input.query.search
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "hasPhoto",
+                    value: input.query.hasPhoto
+                )
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                return (request, nil)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.AppGetAuthors.Output.Ok.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Components.Schemas.AppPageResponseAppAuthorSummary.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .ok(.init(body: body))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
+    /// Get app author details
+    ///
+    /// Retrieve detailed app-facing information for a single author.
+    ///
+    /// - Remark: HTTP `GET /api/v1/app/authors/{authorId}`.
+    /// - Remark: Generated from `#/paths//api/v1/app/authors/{authorId}/get(appGetAuthorDetail)`.
+    internal func appGetAuthorDetail(_ input: Operations.AppGetAuthorDetail.Input) async throws -> Operations.AppGetAuthorDetail.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.AppGetAuthorDetail.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/api/v1/app/authors/{}",
+                    parameters: [
+                        input.path.authorId
+                    ]
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .get
+                )
+                suppressMutabilityWarning(&request)
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                return (request, nil)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.AppGetAuthorDetail.Output.Ok.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Components.Schemas.AppAuthorDetail.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .ok(.init(body: body))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
     /// List app books
     ///
     /// Retrieve paginated books for the app with optional filtering and sorting.
@@ -2500,6 +2675,141 @@ internal struct Client: APIProtocol {
                         preconditionFailure("bestContentType chose an invalid content type.")
                     }
                     return .ok(.init(body: body))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
+    /// Get PDF annotations for a book
+    ///
+    /// Retrieve serialized PDF annotations for a specific book.
+    ///
+    /// - Remark: HTTP `GET /api/v1/pdf-annotations/book/{bookId}`.
+    /// - Remark: Generated from `#/paths//api/v1/pdf-annotations/book/{bookId}/get(getAnnotations)`.
+    internal func getAnnotations(_ input: Operations.GetAnnotations.Input) async throws -> Operations.GetAnnotations.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.GetAnnotations.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/api/v1/pdf-annotations/book/{}",
+                    parameters: [
+                        input.path.bookId
+                    ]
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .get
+                )
+                suppressMutabilityWarning(&request)
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                return (request, nil)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.GetAnnotations.Output.Ok.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Operations.GetAnnotations.Output.Ok.Body.JsonPayload.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .ok(.init(body: body))
+                case 204:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.GetAnnotations.Output.NoContent.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Operations.GetAnnotations.Output.NoContent.Body.JsonPayload.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .noContent(.init(body: body))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
+    /// Save PDF annotations for a book
+    ///
+    /// Save or update serialized PDF annotations for a specific book.
+    ///
+    /// - Remark: HTTP `PUT /api/v1/pdf-annotations/book/{bookId}`.
+    /// - Remark: Generated from `#/paths//api/v1/pdf-annotations/book/{bookId}/put(saveAnnotations)`.
+    internal func saveAnnotations(_ input: Operations.SaveAnnotations.Input) async throws -> Operations.SaveAnnotations.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.SaveAnnotations.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/api/v1/pdf-annotations/book/{}",
+                    parameters: [
+                        input.path.bookId
+                    ]
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .put
+                )
+                suppressMutabilityWarning(&request)
+                let body: OpenAPIRuntime.HTTPBody?
+                switch input.body {
+                case let .json(value):
+                    body = try converter.setRequiredRequestBodyAsJSON(
+                        value,
+                        headerFields: &request.headerFields,
+                        contentType: "application/json; charset=utf-8"
+                    )
+                }
+                return (request, body)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 204:
+                    return .noContent(.init())
                 default:
                     return .undocumented(
                         statusCode: response.status.code,

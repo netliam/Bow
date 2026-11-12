@@ -47,6 +47,9 @@ struct CollectionView: View {
     var body: some View {
         let books = collection.sorted(allBooks.filter(collection.contains))
         ScrollView {
+            if case .author(let name) = collection {
+                AuthorHeader(name: name, bookCount: books.count)
+            }
             if case .series = collection, let subtitle = seriesSubtitle(books) {
                 Text(subtitle)
                     .font(.subheadline)
@@ -57,6 +60,8 @@ struct CollectionView: View {
             BookGrid(books: books, showsSeriesNumber: collection.isSeries)
         }
         .navigationTitle(collection.title)
+        // An author's header shows their name large, next to the photo.
+        .navigationBarTitleDisplayMode(collection.isSeries ? .automatic : .inline)
         .overlay {
             if books.isEmpty {
                 ContentUnavailableView("No Books", systemImage: "books.vertical")
@@ -131,12 +136,7 @@ struct AuthorListView: View {
         return List(authors, id: \.self) { author in
             NavigationLink(value: BookCollection.author(author)) {
                 HStack(spacing: 14) {
-                    Text(Self.initials(author))
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.white)
-                        .frame(width: 40, height: 40)
-                        .background(Color.accentColor.gradient, in: .circle)
-                        .accessibilityHidden(true)
+                    AuthorAvatar(name: author)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(author).font(.headline)
                         let count = counts[author] ?? 0
