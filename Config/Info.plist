@@ -2,27 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- Self-hosted Grimmory servers are often plain http on a LAN.
-	     NSAllowsLocalNetworking permits .local names, bare IPs and unqualified hostnames only;
-	     public hosts still require HTTPS. See docs/architecture.md §8. -->
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSAllowsLocalNetworking</key>
-		<true/>
-	</dict>
-
-	<!-- Background refresh: push reading positions and status, then refresh the catalog. -->
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>fetch</string>
-	</array>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>app.bow.refresh</string>
 	</array>
-
-	<!-- "Open in Bow" for EPUBs from Files, Mail, Safari and the share sheet. Bow copies the file into its own
-	     storage either way; opening in place is declared because macOS (Catalyst) requires it. -->
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
@@ -40,5 +23,21 @@
 	</array>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<true/>
+		<key>UISceneConfigurations</key>
+		<dict/>
+	</dict>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+	</array>
 </dict>
 </plist>
