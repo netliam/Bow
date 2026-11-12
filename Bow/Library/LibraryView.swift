@@ -192,6 +192,7 @@ struct LibraryContent<Header: View>: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(LibrarySync.self) private var librarySync
     @Environment(LocalImporter.self) private var importer
+    @Environment(BookIntake.self) private var intake
     @Environment(AppActions.self) private var actions
     @AppStorage("librarySort") private var sort: LibrarySort = .recentlyRead
     @Query(filter: #Predicate<Book> { !$0.isRemovedOnServer }) private var allBooks: [Book]
@@ -217,12 +218,12 @@ struct LibraryContent<Header: View>: View {
         }
         .refreshable { await librarySync.syncAll(modelContext.container) }
         .dropDestination(for: URL.self) { urls, _ in
-            let books = urls.filter { $0.pathExtension.lowercased() == "epub" }
-            importer.importFiles(books)
+            let books = urls.filter { BookIntake.acceptedExtensions.contains($0.pathExtension.lowercased()) }
+            intake.receive(books)
             return !books.isEmpty
         }
         .overlay(alignment: .bottom) {
-            if let problem = librarySync.problem ?? importer.problem {
+            if let problem = librarySync.problem ?? importer.problem ?? intake.problem {
                 Text(problem)
                     .font(.footnote)
                     .padding(12)
@@ -231,6 +232,7 @@ struct LibraryContent<Header: View>: View {
                     .onTapGesture {
                         librarySync.problem = nil
                         importer.problem = nil
+                        intake.problem = nil
                     }
             }
         }
