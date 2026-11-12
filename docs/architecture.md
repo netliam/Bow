@@ -42,7 +42,17 @@ Bow (app target, SwiftUI)            ← screens, navigation, platform glue
 ```
 
 Dependency direction: `App → BowReaders/BowSync/BowLibrary → BowModel`, `BowSync → GrimmoryAPI`.
-`GrimmoryAPI` depends on nothing.
+`GrimmoryAPI` depends on nothing in Bow.
+
+**Built so far (Phase 0):**
+- `BowModel`: SwiftData schema v1, with no shelves yet. Shelves come in Phase 2 as a schema migration.
+- `GrimmoryAPI`: the generated client, plus the hand-written `GrimmoryClient`, which covers sign-in, the
+  single-flight refresh, server info, the current user, and catalog paging and IDs.
+- `BowSync`, `BowLibrary` and `BowReaders` are created when they get their first code.
+
+The generated code lives in `GrimmoryAPI/Generated` and is committed. Regenerate it with
+`Scripts/generate-grimmory-api.sh`, which patches the vendored spec, then runs swift-openapi-generator
+1.14.4 from a gitignored `.build-tools/` folder. Xcode never builds or runs the generator.
 
 ### Data flow
 

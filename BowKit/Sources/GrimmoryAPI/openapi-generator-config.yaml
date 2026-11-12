@@ -1,0 +1,32 @@
+# swift-openapi-generator config for Grimmory.
+# Run Scripts/generate-grimmory-api.sh after changing this list or the vendored spec.
+generate:
+  - types
+  - client
+accessModifier: internal
+namingStrategy: idiomatic
+filter:
+  operations:
+    # Server and auth
+    - getPing
+    - getVersionInfo
+    - getPublicSettings
+    - loginUser
+    - refreshToken
+    - logout
+    - oidcGenerateState
+    - oidcHandleMobileCallback
+    - getMyself
+    # Catalog (app API)
+    - appGetLibraries
+    - appGetBooks
+    - appGetAllBookIds
+    - appGetBookDetail
+    - appSearchBooks
+    - appGetContinueReading
+    - appGetRecentlyAdded
+    # Reading state
+    - getBookProgress
+    - updateBookProgress
+    - appUpdateStatus
+    - appUpdateRating
