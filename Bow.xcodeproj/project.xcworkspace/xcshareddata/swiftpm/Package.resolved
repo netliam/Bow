@@ -1,0 +1,15 @@
+{
+  "originHash" : "7c17093f05daa43d9ff8e7d0fb89d95a3fc193f44b324bba5be4ce091116050a",
+  "pins" : [
+    {
+      "identity" : "dcepubreaderkit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/netliam/DCEpubReaderKit.git",
+      "state" : {
+        "revision" : "f33bfbd75950d5bd7dcb7ab8dedcaad8cf53e732",
+        "version" : "0.1.0"
+      }
+    }
+  ],
+  "version" : 3
+}
