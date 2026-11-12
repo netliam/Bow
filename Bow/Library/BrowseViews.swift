@@ -82,8 +82,10 @@ private extension BookCollection {
     }
 }
 
-/// Every series in the library.
-struct SeriesListView: View {
+/// Every series in the library, as rows. `header` scrolls with them (the Library tab's chips).
+struct SeriesListView<Header: View>: View {
+    var title = "Series"
+    @ViewBuilder var header: Header
     @Query(filter: #Predicate<Book> { !$0.isRemovedOnServer && $0.seriesName != nil }) private var books: [Book]
 
     var body: some View {
@@ -91,12 +93,19 @@ struct SeriesListView: View {
             .map { (name: $0.key, books: BookCollection.series($0.key).sorted($0.value)) }
             .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
 
-        List(series, id: \.name) { item in
-            NavigationLink(value: BookCollection.series(item.name)) {
-                HStack(spacing: 14) {
-                    CoverView(book: item.books[0])
-                        .frame(width: 44)
-                    VStack(alignment: .leading, spacing: 2) {
+        ScrollView {
+            header
+            if series.isEmpty {
+                ContentUnavailableView("No Series", systemImage: "square.stack",
+                                       description: Text("Books that belong to a series are grouped here."))
+                    .padding(.top, 40)
+            }
+            LazyVStack(spacing: 0) {
+                ForEach(series, id: \.name) { item in
+                    BrowseRow(value: BookCollection.series(item.name)) {
+                        CoverView(book: item.books[0])
+                            .frame(width: 44, height: 66)
+                    } text: {
                         Text(item.name).font(.headline)
                         Text(seriesDetail(item.books))
                             .font(.subheadline)
@@ -105,14 +114,9 @@ struct SeriesListView: View {
                     }
                 }
             }
+            .padding(.horizontal)
         }
-        .navigationTitle("Series")
-        .overlay {
-            if series.isEmpty {
-                ContentUnavailableView("No Series", systemImage: "books.vertical",
-                                       description: Text("Books that belong to a series are grouped here."))
-            }
-        }
+        .navigationTitle(title)
     }
 
     private func seriesDetail(_ books: [Book]) -> String {
@@ -122,8 +126,38 @@ struct SeriesListView: View {
     }
 }
 
-/// Every author in the library.
-struct AuthorListView: View {
+extension SeriesListView where Header == EmptyView {
+    init() { self.init(header: { EmptyView() }) }
+}
+
+/// A tappable row with a leading image, text and a chevron, divided from the next.
+struct BrowseRow<Value: Hashable, Leading: View, Content: View>: View {
+    let value: Value
+    @ViewBuilder var leading: Leading
+    @ViewBuilder var text: Content
+
+    var body: some View {
+        NavigationLink(value: value) {
+            HStack(spacing: 14) {
+                leading
+                VStack(alignment: .leading, spacing: 2) { text }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.vertical, 10)
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .overlay(alignment: .bottom) { Divider().padding(.leading, 58) }
+    }
+}
+
+/// Every author in the library, as rows. `header` scrolls with them (the Library tab's chips).
+struct AuthorListView<Header: View>: View {
+    var title = "Authors"
+    @ViewBuilder var header: Header
     @Query(filter: #Predicate<Book> { !$0.isRemovedOnServer }) private var books: [Book]
 
     var body: some View {
@@ -131,13 +165,21 @@ struct AuthorListView: View {
         for book in books {
             for author in Set(book.authors) { counts[author, default: 0] += 1 }
         }
-        let authors = counts.keys.sorted { Self.sortKey($0).localizedStandardCompare(Self.sortKey($1)) == .orderedAscending }
+        let authors = counts.keys.sorted {
+            AuthorNames.sortKey($0).localizedStandardCompare(AuthorNames.sortKey($1)) == .orderedAscending
+        }
 
-        return List(authors, id: \.self) { author in
-            NavigationLink(value: BookCollection.author(author)) {
-                HStack(spacing: 14) {
-                    AuthorAvatar(name: author)
-                    VStack(alignment: .leading, spacing: 2) {
+        return ScrollView {
+            header
+            if authors.isEmpty {
+                ContentUnavailableView("No Authors", systemImage: "person.2")
+                    .padding(.top, 40)
+            }
+            LazyVStack(spacing: 0) {
+                ForEach(authors, id: \.self) { author in
+                    BrowseRow(value: BookCollection.author(author)) {
+                        AuthorAvatar(name: author, size: 44)
+                    } text: {
                         Text(author).font(.headline)
                         let count = counts[author] ?? 0
                         Text(count == 1 ? "1 book" : "\(count) books")
@@ -146,15 +188,18 @@ struct AuthorListView: View {
                     }
                 }
             }
+            .padding(.horizontal)
         }
-        .navigationTitle("Authors")
-        .overlay {
-            if authors.isEmpty {
-                ContentUnavailableView("No Authors", systemImage: "person.2")
-            }
-        }
+        .navigationTitle(title)
     }
+}
 
+extension AuthorListView where Header == EmptyView {
+    init() { self.init(header: { EmptyView() }) }
+}
+
+/// Author name helpers.
+enum AuthorNames {
     /// Sorted by surname, as bookshops do: "Susanna Clarke" files under C.
     static func sortKey(_ name: String) -> String {
         let parts = name.split(separator: " ")

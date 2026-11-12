@@ -18,6 +18,7 @@ import SwiftUI
     nonisolated static let refreshTaskID = "app.bow.refresh"
 
     init() {
+        Self.useSerifLargeTitles()
         do {
             let container = try BowStore.makeContainer()
             self.container = container
@@ -65,5 +66,14 @@ import SwiftUI
         let request = BGAppRefreshTaskRequest(identifier: refreshTaskID)
         request.earliestBeginDate = Date(timeIntervalSinceNow: 60 * 60)
         try? await BGTaskScheduler.shared.submitTaskRequest(request)
+    }
+}
+
+extension Bow {
+    /// Large navigation titles in the serif face the section headers use, for a bookish feel.
+    static func useSerifLargeTitles() {
+        let base = UIFont.preferredFont(forTextStyle: .largeTitle)
+        guard let descriptor = base.fontDescriptor.withDesign(.serif)?.withSymbolicTraits(.traitBold) else { return }
+        UINavigationBar.appearance().largeTitleTextAttributes = [.font: UIFont(descriptor: descriptor, size: 0)]
     }
 }

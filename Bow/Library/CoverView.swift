@@ -3,6 +3,7 @@ import BowModel
 import BowSync
 import GrimmoryAPI
 import SwiftUI
+import CoreImage
 import UIKit
 
 /// A book cover, loaded from the server once and kept on disk. Falls back to a title card.
@@ -24,14 +25,17 @@ struct CoverView: View {
         .clipShape(.rect(cornerRadius: 4))
         .shadow(color: .black.opacity(0.15), radius: 3, y: 2)
         .task(id: CoverRequest(book)) {
-            if let request = CoverRequest(book) {
-                image = await CoverCache.shared.image(for: request)
-            } else {
-                // Imported books keep their cover next to the file (`LocalImporter`).
-                let cover = BookStorage.standard.directory(for: book.id).appending(path: "cover")
-                image = UIImage(contentsOfFile: cover.path(percentEncoded: false))
-            }
+            image = await Self.image(for: book)
         }
+    }
+
+    /// The book's cover: from the server (cached), or for imported books, the copy kept next to the file.
+    static func image(for book: Book) async -> UIImage? {
+        if let request = CoverRequest(book) {
+            return await CoverCache.shared.image(for: request)
+        }
+        let cover = BookStorage.standard.directory(for: book.id).appending(path: "cover")
+        return UIImage(contentsOfFile: cover.path(percentEncoded: false))
     }
 
     private var placeholder: some View {
@@ -99,5 +103,26 @@ actor CoverCache {
         inFlight[request.key] = nil
         memory[request.key] = image
         return image
+    }
+}
+
+extension UIImage {
+    /// The image's average colour, darkened enough for white text on top. Used to tint cards to match a cover.
+    func readableTint() -> UIColor? {
+        guard let input = CIImage(image: self) else { return nil }
+        let filter = CIFilter(name: "CIAreaAverage", parameters: [
+            kCIInputImageKey: input, kCIInputExtentKey: CIVector(cgRect: input.extent),
+        ])
+        guard let output = filter?.outputImage else { return nil }
+        var pixel = [UInt8](repeating: 0, count: 4)
+        CIContext(options: [.workingColorSpace: NSNull()]).render(
+            output, toBitmap: &pixel, rowBytes: 4, bounds: CGRect(x: 0, y: 0, width: 1, height: 1),
+            format: .RGBA8, colorSpace: nil
+        )
+        let average = UIColor(red: CGFloat(pixel[0]) / 255, green: CGFloat(pixel[1]) / 255,
+                              blue: CGFloat(pixel[2]) / 255, alpha: 1)
+        var hue: CGFloat = 0, saturation: CGFloat = 0, brightness: CGFloat = 0, alpha: CGFloat = 0
+        average.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
+        return UIColor(hue: hue, saturation: min(saturation * 1.2, 0.8), brightness: min(brightness, 0.42), alpha: 1)
     }
 }

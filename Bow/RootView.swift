@@ -6,142 +6,106 @@ import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Sidebar of libraries (collapses to a stack on iPhone) and the selected library's books.
+/// Bow's three places: Home (what to read next), Library (everything, by collection) and Search. Tabs on iPhone;
+/// a sidebar on iPad and Mac.
 struct RootView: View {
+    enum Tab: Hashable { case home, library, search }
+
     @Environment(\.modelContext) private var modelContext
     @Environment(LibrarySync.self) private var librarySync
     @Environment(LocalImporter.self) private var importer
-    @Query(sort: \Account.createdAt) private var accounts: [Account]
 
-    @State private var selection: LibrarySelection? = .all
-    @State private var isAddingServer = false
-    @State private var isImporting = false
-    @State private var accountToRemove: Account?
+    @State private var tab: Tab = .home
+    @State private var actions = AppActions()
 
     var body: some View {
-        NavigationSplitView {
-            List(selection: $selection) {
-                Label("All Books", systemImage: "books.vertical")
-                    .tag(LibrarySelection.all)
-                Label("Series", systemImage: "square.stack")
-                    .tag(LibrarySelection.series)
-                Label("Authors", systemImage: "person.2")
-                    .tag(LibrarySelection.authors)
-
-                if let local = accounts.first(where: { $0.kind == .local }) {
-                    Label(local.displayName, systemImage: "ipad.and.iphone")
-                        .tag(LibrarySelection.account(local.id))
-                }
-
-                ForEach(grimmoryAccounts) { account in
-                    Section(account.displayName) {
-                        Label("Library", systemImage: "server.rack")
-                            .tag(LibrarySelection.account(account.id))
-                            .contextMenu {
-                                Button("Sign Out and Remove…", role: .destructive) { accountToRemove = account }
-                            }
-                        ForEach(shelves(of: account, .regular)) { shelf in
-                            Label(shelf.name, systemImage: ShelfIcon.symbol(for: shelf))
-                                .tag(LibrarySelection.shelf(shelf.id))
-                        }
-                        ForEach(shelves(of: account, .magic)) { shelf in
-                            Label(shelf.name, systemImage: ShelfIcon.symbol(for: shelf))
-                                .tag(LibrarySelection.shelf(shelf.id))
-                        }
-                    }
+        TabView(selection: $tab) {
+            SwiftUI.Tab("Home", systemImage: "house", value: Tab.home) {
+                NavigationStack {
+                    HomeView()
+                        .bookDestinations()
                 }
             }
-            .navigationTitle("Bow")
-            .toolbar {
-                Menu("Add", systemImage: "plus") {
-                    Button("Add Grimmory Server", systemImage: "server.rack") { isAddingServer = true }
-                    Button("Add Books from Files", systemImage: "doc.badge.plus") { isImporting = true }
+            SwiftUI.Tab("Library", systemImage: "books.vertical", value: Tab.library) {
+                NavigationStack {
+                    LibraryTab()
+                        .bookDestinations()
                 }
             }
-        } detail: {
-            NavigationStack {
-                Group {
-                    switch selection {
-                    case .series:
-                        SeriesListView()
-                    case .authors:
-                        AuthorListView()
-                    default:
-                        LibraryView(accountID: selection?.accountID, shelfID: selection?.shelfID,
-                                    isAddingServer: $isAddingServer, isImporting: $isImporting)
-                            .navigationTitle(title)
-                    }
-                }
-                .navigationDestination(for: Book.self) { BookDetailView(book: $0) }
-                .navigationDestination(for: BookCollection.self) { CollectionView(collection: $0) }
+            SwiftUI.Tab(value: Tab.search, role: .search) {
+                SearchTab()
             }
-            // A fresh stack for each sidebar choice: re-identifying only the root would keep pages pushed from the
-            // previous choice, and their destinations, around.
-            .id(selection)
         }
-        .fileImporter(isPresented: $isImporting, allowedContentTypes: [.epub], allowsMultipleSelection: true) { result in
+        .tabViewStyle(.sidebarAdaptable)
+        .fileImporter(isPresented: $actions.isImporting, allowedContentTypes: [.epub], allowsMultipleSelection: true) { result in
             if case .success(let urls) = result { importer.importFiles(urls) }
         }
-        .sheet(isPresented: $isAddingServer) {
-            AddServerView { accountID in
-                selection = .account(accountID)
+        .sheet(isPresented: $actions.isAddingServer) {
+            AddServerView { _ in
+                tab = .home
                 Task { await librarySync.syncAll(modelContext.container) }
             }
         }
-        .confirmationDialog("Sign out of \(accountToRemove?.displayName ?? "")?",
-                            isPresented: .init(get: { accountToRemove != nil }, set: { if !$0 { accountToRemove = nil } }),
-                            titleVisibility: .visible) {
-            Button("Sign Out and Remove", role: .destructive) {
-                if let account = accountToRemove { Task { await remove(account) } }
-            }
-        } message: {
-            Text("Its books are removed from this device. Nothing changes on the server.")
+        .sheet(isPresented: $actions.isShowingAccounts) {
+            AccountsView()
         }
         .task { await librarySync.syncAll(modelContext.container) }
-    }
-
-    private var grimmoryAccounts: [Account] { accounts.filter { $0.kind == .grimmory } }
-
-    private func shelves(of account: Account, _ kind: Shelf.Kind) -> [Shelf] {
-        account.shelves
-            .filter { $0.kind == kind }
-            .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
-    }
-
-    private var title: String {
-        if let shelfID = selection?.shelfID {
-            return accounts.lazy.flatMap(\.shelves).first { $0.id == shelfID }?.name ?? "Shelf"
-        }
-        guard let id = selection?.accountID else { return "All Books" }
-        return accounts.first { $0.id == id }?.displayName ?? "Library"
-    }
-
-    private func remove(_ account: Account) async {
-        if let client = GrimmoryAccounts.client(for: account) {
-            _ = try? await client.signOut()
-        }
-        GrimmoryAccounts.forget(accountID: account.id)
-        if selection?.accountID == account.id || account.shelves.contains(where: { $0.id == selection?.shelfID }) {
-            selection = .all
-        }
-        for book in account.books { BookStorage.standard.removeFiles(for: book.id) }  // Downloads go too.
-        modelContext.delete(account)
-        try? modelContext.save()
+        // Outermost, so the sheets above get it too: a sheet's content reads the environment where it's attached.
+        .environment(actions)
     }
 }
 
-enum LibrarySelection: Hashable {
-    case all
-    case series
-    case authors
-    case account(UUID)
-    case shelf(UUID)
+/// App-wide actions any screen can start: adding a server, importing files, managing accounts.
+@Observable
+final class AppActions {
+    var isAddingServer = false
+    var isImporting = false
+    var isShowingAccounts = false
+}
 
-    var accountID: UUID? {
-        if case .account(let id) = self { id } else { nil }
+extension View {
+    /// Where a tab's navigation stack can go: a book, a series or author, or a library collection.
+    func bookDestinations() -> some View {
+        navigationDestination(for: Book.self) { BookDetailView(book: $0) }
+            .navigationDestination(for: BookCollection.self) { CollectionView(collection: $0) }
+            .navigationDestination(for: LibraryFilter.self) { filter in
+                LibraryContent(filter: filter, title: filter.title)
+            }
     }
 
-    var shelfID: UUID? {
-        if case .shelf(let id) = self { id } else { nil }
+    /// The account button at the top of Home and Library.
+    func accountToolbar() -> some View {
+        toolbar {
+            ToolbarItem(placement: .primaryAction) { AccountButton() }
+        }
+    }
+}
+
+/// The signed-in account's initials (or a person), opening accounts and settings.
+struct AccountButton: View {
+    @Environment(AppActions.self) private var actions
+    @Query(sort: \Account.createdAt) private var accounts: [Account]
+
+    var body: some View {
+        Button {
+            actions.isShowingAccounts = true
+        } label: {
+            if let initials {
+                Text(initials)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 30, height: 30)
+                    .background(Color.accentColor.gradient, in: .circle)
+            } else {
+                Image(systemName: "person.crop.circle")
+            }
+        }
+        .accessibilityLabel("Accounts")
+    }
+
+    private var initials: String? {
+        guard let account = accounts.first(where: { $0.kind == .grimmory }) else { return nil }
+        let name = account.username ?? account.displayName
+        return String(name.prefix(2)).uppercased()
     }
 }

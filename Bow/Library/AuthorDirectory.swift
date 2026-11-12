@@ -61,7 +61,7 @@ struct AuthorAvatar: View {
                     .resizable()
                     .scaledToFill()
             } else {
-                Text(AuthorListView.initials(name))
+                Text(AuthorNames.initials(name))
                     .font(.system(size: size * 0.38, weight: .semibold))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
