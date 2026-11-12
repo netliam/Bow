@@ -20,43 +20,52 @@ Differences from the spec below:
 Not yet verified: hardware keyboard, trackpad and multi-window on a real iPad or Mac, and CFIs against output from
 Grimmory itself.
 
+### `0.2.0` (`ff23916`)
+
+Follow-ups 12, 14 and 15 landed in **`0.2.0`**. Bow is pinned to `0.2.0` "up to next minor" and uses all three.
+- **#12:** CFIs use `<spine>`'s real step from the package file (`DCEpubBook.spineStep`).
+- **#14:** `DCHighlightMenuConfiguration`, with:
+  - four `DCAnnotationStyle`s
+  - a hex `color` on `DCHighlight`
+  - palettes per style
+  - ordered selection and highlight actions, and custom actions
+
+  Bow passes Grimmory's exact palettes (`GrimmoryHighlights` in `Bow/Reader/BowReaderDelegate.swift`) and keeps
+  the default actions, which already match Grimmory's.
+- **#15:** `handleProgress(book:progress:)` with `DCReaderProgress` (fraction, page, total). Bow sends that
+  fraction to Grimmory.
+
+Checked in Bow's Simulator build:
+- **Menu:** the selection menu shows Grimmory's five highlight colours, plus a Style submenu with underline,
+  squiggly and strikethrough, each with the darker line colours.
+- **Squiggly highlight:** a crimson squiggly saved as `squiggly` / `#DC143C`.
+- **Progress:** page 24 of 39 reached the server as 61.54%.
+
 ### Open follow-ups
 
-12. **Read the spine step from the OPF instead of hardcoding `/6`.** `DCCFIConverter.swift:55` builds
-    `"/6/\(2 * (spineIndex + 1))[idref]"`, which assumes `<spine>` is the third child element of `<package>`.
-    That holds for most books, but an OPF with extra elements before `<spine>` (e.g. `<bindings>`, or
-    `<collection>` placed early) will produce CFIs that other readers resolve to the wrong place. Compute the
-    step from `<spine>`'s real position in the parsed package.
-13. **Check CFIs against Grimmory.** Once Bow can talk to a server, compare a few positions and highlights made in
-    Grimmory's web reader against `DCCFIConverter` output. This covers the script-stripping difference noted in
+13. **Check CFIs against Grimmory.** Once Bow can talk to a real server, compare a few positions and highlights made
+    in Grimmory's web reader against `DCCFIConverter` output. This covers the script-stripping difference noted in
     the `0.1.0` report.
-    - Confirmed from Grimmory's source: its web reader (foliate-js) takes the spine step from the real OPF
-      (`CFI.fromElements($$itemref)`), so #12 is a real mismatch and not just theoretical.
-15. **Report a whole-book position to the delegate.** The reader already shows "11 of 39" pages, but
-    `handleCoords` only passes the spine index and chapter coords. So Bow estimates progress from chapter sizes
-    and counts from the start of the chapter: page 11 of 39 is reported as 17%, not 28%. Add the whole-book
-    fraction (or page and total) to `handleCoords`, or a separate delegate callback, and Bow will send that to
-    Grimmory instead.
-14. **Highlight colors that match Grimmory.** The web palette is yellow `#FACC15`, green `#4ADE80`, blue `#38BDF8`,
-    pink `#F472B6` and orange `#FB923C`. The kit's `DCHighlightStyle` has `purple` instead of orange, so orange
-    highlights from the web have nowhere to go.
-    - Add `orange`.
-    - Ideally, also let a highlight carry an arbitrary hex color, so the web's darker variants survive a round trip.
-    - Grimmory also has `strikethrough` and `squiggly` styles. Rendering them is optional. Bow keeps the original
-      style either way.
 
 ## Setup to know first
 
 - **Repo:** `~/Projects/DCEpubReaderKit`
   - The fork is the **`netliam`** remote (`github.com/netliam/DCEpubReaderKit`).
   - `origin` is the original project (`novecapa`). Don't push there.
-- **Branch:** Bow tracks `netliam/main` (branch rule, no version pin).
-  - The local checkout is on `feature/roadmap-items`. As of 2026-11-11 it's at the same commit as `main` (`55e76ef`).
-  - Changes reach Bow only after they're merged to `main`.
-- **Tags:** the fork has none. The `0.0.x` tags exist only on upstream.
-- **Current state:** Bow builds against `main` today for the iOS Simulator and Mac Catalyst. Bow ships on Mac as
+- **Version:** Bow pins the fork at **`0.2.x`** ("up to next minor" from `0.2.0`).
+  - Bug fixes released as `0.2.1`, `0.2.2`… reach Bow on its next package update.
+  - API changes should be tagged `0.3.0`; Bow then moves its pin deliberately.
+  - The `0.0.x` tags exist only on upstream.
+- **Current state:** Bow builds against `0.2.0` for the iOS Simulator and Mac Catalyst. Bow ships on Mac as
   **Mac Catalyst** for v1 (Bow's `docs/adr/0001-mac-via-catalyst.md`), so the kit can stay UIKit for now.
-- **Checking a change:** from `~/Projects/Bow`, after the change is on `main`:
+- **How Bow uses the kit** (so changes don't break it):
+  - `DCReaderViewBuilder.build(…, delegate:, configuration:)` with `bookId`, `defaults` (suite
+    `app.bow.reader`), `onClose` and `highlightMenu.palettes`.
+  - A custom `DCReaderCoordsProtocol` delegate (`Bow/Reader/BowReaderDelegate.swift`), not `DCJSONReaderStore`.
+    It implements `handleCoords`, `handleProgress`, and the highlight save/delete/list calls, reading
+    `DCHighlight.annotationStyle` and `.color`.
+  - `DCCFIConverter` for both directions, and `DCReaderOrientationLock.supportedOrientations(for:)`.
+- **Checking a change:** from `~/Projects/Bow`, after pointing Bow at the new version:
   ```bash
   xcodebuild -scheme Bow -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO
   xcodebuild -scheme Bow -destination 'generic/platform=macOS,variant=Mac Catalyst' build CODE_SIGNING_ALLOWED=NO

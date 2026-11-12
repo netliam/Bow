@@ -51,14 +51,6 @@ private func makeEPUB() throws -> URL {
         storage.removeFiles(for: bookID)
         #expect(!FileManager.default.fileExists(atPath: storage.directory(for: bookID).path(percentEncoded: false)))
     }
-
-    @Test func readingFractionWeighsChaptersBySize() {
-        #expect(ReadingFraction.estimate(chapterSizes: [100, 300, 600], spineIndex: 0) == 0)
-        #expect(ReadingFraction.estimate(chapterSizes: [100, 300, 600], spineIndex: 1) == 0.1)
-        #expect(ReadingFraction.estimate(chapterSizes: [100, 300, 600], spineIndex: 2) == 0.4)
-        #expect(ReadingFraction.estimate(chapterSizes: [100, 300, 600], spineIndex: 9) == 1)
-        #expect(ReadingFraction.estimate(chapterSizes: [], spineIndex: 3) == 0)
-    }
 }
 
 struct FakeFileSource: BookFileSource {

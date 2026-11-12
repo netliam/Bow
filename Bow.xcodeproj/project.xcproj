@@ -12,14 +12,14 @@
   },
   "packages": [
     {
+      "kind": "local",
+      "path": "BowKit",
+    }, {
       "kind": "remote",
       "repository": "https://github.com/netliam/DCEpubReaderKit.git",
       "version": {
-        "up-to-next-minor-version": "0.1.0",
+        "up-to-next-minor-version": "0.2.0",
       },
-    }, {
-      "kind": "local",
-      "path": "BowKit",
     },
   ],
   "files": [

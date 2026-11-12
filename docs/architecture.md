@@ -79,8 +79,10 @@ Dependency direction: `App → BowReaders/BowSync/BowLibrary → BowModel`, `Bow
     - read status (all 9 Grimmory statuses) and a 1–5 star rating
   - **Downloads:** run in a background `URLSession` (`BackgroundURLSessionTransfer`), so they continue while
     Bow is suspended and are reconciled on relaunch. Requests are signed just before they start.
-  - **Reader:** `BowReaderDelegate` stores positions as CFIs and annotations as `Annotation`, mapped to
-    Grimmory's colours.
+  - **Reader (kit `0.2.0`):** `BowReaderDelegate` stores positions as CFIs, progress as the reader's own
+    whole-book fraction, and annotations as `Annotation` with Grimmory's style and hex colour unchanged. The
+    highlight menu offers Grimmory's exact palettes and styles: highlight, underline, squiggly and
+    strikethrough.
     - Before opening, Bow asks Grimmory for its position, giving up after 3 seconds. If the server's is more than
       a minute newer and elsewhere, Bow asks "Continue where you left off?". If the book has never been opened on
       this device, it goes straight there.
@@ -90,7 +92,6 @@ Dependency direction: `App → BowReaders/BowSync/BowLibrary → BowModel`, `Bow
   - **Background refresh:** a `BGAppRefreshTask` (`app.bow.refresh`, about hourly) pushes changes, then
     refreshes the catalog.
 - **Not done yet:**
-  - The percentage counts from the start of the current chapter (kit follow-up #15).
   - PDF and comics show a "not supported yet" message.
   - Annotations stay local until Phase 2.
   - Background tasks need a real bundle ID and a signed build to run on a device.

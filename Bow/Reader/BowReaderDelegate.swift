@@ -1,4 +1,3 @@
-import BowLibrary
 import BowModel
 import BowSync
 import DCEpubReaderKit
@@ -14,7 +13,6 @@ final class BowReaderDelegate: DCReaderCoordsProtocol {
     private let bookID: UUID
     private let epub: DCEpubBook
     private let converter: DCCFIConverter
-    private let chapterSizes: [Int]
     /// Called after a position is saved and queued for the server.
     private let onProgressQueued: () -> Void
     private var cfiTask: Task<Void, Never>?
@@ -27,12 +25,6 @@ final class BowReaderDelegate: DCReaderCoordsProtocol {
         self.bookID = bookID
         self.epub = epub
         self.converter = DCCFIConverter(book: epub)
-        self.chapterSizes = epub.spine.indices.map { index in
-            guard let url = epub.chapterURL(forSpineIndex: index),
-                  let size = (try? FileManager.default.attributesOfItem(atPath: url.path(percentEncoded: false))[.size] as? NSNumber)?.intValue
-            else { return 0 }
-            return size
-        }
         self.onProgressQueued = onProgressQueued
     }
 
@@ -54,7 +46,6 @@ final class BowReaderDelegate: DCReaderCoordsProtocol {
         progress.kitCoords = coords
         progress.spineIndex = spineIndex
         progress.href = href(forSpineIndex: spineIndex)
-        progress.fraction = ReadingFraction.estimate(chapterSizes: chapterSizes, spineIndex: spineIndex)
         progress.updatedAt = Date()
         try? context.save()
 
@@ -71,6 +62,14 @@ final class BowReaderDelegate: DCReaderCoordsProtocol {
         }
     }
 
+    /// The whole-book fraction, as the reader's progress bar shows it ("11 of 39"). Arrives right after
+    /// `handleCoords`, so it's in place before the delayed CFI push reads it.
+    func handleProgress(book _: DCEpubBook, progress readerProgress: DCReaderProgress) {
+        guard let progress = book?.progress else { return }
+        progress.fraction = min(max(readerProgress.fraction, 0), 1)
+        try? context.save()
+    }
+
     /// The chapter's path inside the EPUB, as Grimmory's web reader names sections (relative to the zip root).
     private func href(forSpineIndex index: Int) -> String? {
         guard epub.spine.indices.contains(index) else { return nil }
@@ -85,19 +84,19 @@ final class BowReaderDelegate: DCReaderCoordsProtocol {
     func save(highlight: DCHighlight) async {
         guard let book, let id = UUID(uuidString: highlight.uuid) else { return }
         let annotation = book.annotations.first { $0.id == id } ?? {
-            let annotation = Annotation(id: id, book: book, kind: HighlightMapping.kind(highlight.type), text: highlight.text)
+            let annotation = Annotation(id: id, book: book, kind: GrimmoryHighlights.kind(highlight.type), text: highlight.text)
             annotation.createdAt = Date(timeIntervalSince1970: highlight.dateCreated)
             context.insert(annotation)
             return annotation
         }()
-        annotation.kindRaw = HighlightMapping.kind(highlight.type).rawValue
+        annotation.kindRaw = GrimmoryHighlights.kind(highlight.type).rawValue
         annotation.text = highlight.text
         annotation.kitCoords = highlight.coords
         annotation.spineIndex = highlight.spineIndex
         annotation.note = highlight.note.isEmpty ? nil : highlight.note
         annotation.chapterTitle = highlight.chapterTitle.isEmpty ? nil : highlight.chapterTitle
-        (annotation.colorHex, annotation.style) = HighlightMapping.grimmoryStyle(highlight.displayStyle,
-                                                                                keeping: annotation.style)
+        annotation.style = highlight.annotationStyle.rawValue
+        annotation.colorHex = highlight.color.uppercased()
         annotation.updatedAt = Date()
         annotation.deletedAt = nil
         try? context.save()
@@ -130,24 +129,48 @@ final class BowReaderDelegate: DCReaderCoordsProtocol {
             bookId: bookID.uuidString,
             chapterId: epub.chapterURL(forSpineIndex: spineIndex)?.lastPathComponent ?? "",
             spineIndex: spineIndex,
-            type: HighlightMapping.markType(annotation.kind),
+            type: GrimmoryHighlights.markType(annotation.kind),
             text: annotation.text,
             coords: annotation.kitCoords ?? "",
             note: annotation.note ?? "",
             chapterTitle: annotation.chapterTitle ?? "",
-            style: HighlightMapping.kitStyle(colorHex: annotation.colorHex, style: annotation.style),
+            annotationStyle: GrimmoryHighlights.style(annotation.style),
+            color: annotation.colorHex ?? GrimmoryHighlights.defaultColor(for: annotation.style),
             dateCreated: annotation.createdAt.timeIntervalSince1970,
             dateUpdated: annotation.updatedAt.timeIntervalSince1970
         )
     }
 }
 
-/// Between the kit's highlight styles and Grimmory's `color` + `style`. Grimmory's web palette is yellow, green,
-/// blue, pink and orange; the kit has purple instead of orange (kit follow-up #14).
-enum HighlightMapping {
-    static let colors: [DCHighlightStyle: String] = [
-        .yellow: "#FACC15", .green: "#4ADE80", .blue: "#38BDF8", .pink: "#F472B6", .purple: "#A78BFA",
+/// Grimmory's annotation styles and colours, exactly as its web reader offers them
+/// (`frontend/.../ebook-reader/shared/selection-popup.component.ts`), so annotations look the same in both.
+enum GrimmoryHighlights {
+    static let highlightColors: [(String, String)] = [
+        ("Yellow", "#FACC15"), ("Green", "#4ADE80"), ("Blue", "#38BDF8"), ("Pink", "#F472B6"), ("Orange", "#FB923C"),
     ]
+    /// Underline, squiggly and strikethrough use a darker set.
+    static let lineColors: [(String, String)] = [
+        ("Dark Gold", "#B8860B"), ("Forest Green", "#228B22"), ("Dodger Blue", "#1E90FF"),
+        ("Crimson", "#DC143C"), ("Dark Orange", "#FF8C00"),
+    ]
+
+    /// In the web reader's order.
+    static let palettes: [DCHighlightPalette] = [
+        DCHighlightPalette(style: .highlight, colors: highlightColors),
+        DCHighlightPalette(style: .underline, colors: lineColors),
+        DCHighlightPalette(style: .squiggly, colors: lineColors),
+        DCHighlightPalette(style: .strikethrough, colors: lineColors),
+    ]
+
+    /// Grimmory's style names are the kit's raw values; anything unknown draws as a highlight.
+    static func style(_ name: String) -> DCAnnotationStyle {
+        DCAnnotationStyle(rawValue: name) ?? .highlight
+    }
+
+    /// For annotations stored without a colour: the web reader's first colour for the style.
+    static func defaultColor(for style: String) -> String {
+        (self.style(style) == .highlight ? highlightColors : lineColors)[0].1
+    }
 
     static func kind(_ type: DCHighlight.MarkType) -> Annotation.Kind {
         switch type {
@@ -163,19 +186,5 @@ enum HighlightMapping {
         case .note: .note
         case .bookmark: .bookMark
         }
-    }
-
-    /// Keeps a Grimmory-only style (`strikethrough`, `squiggly`) unless the reader changed it to underline.
-    static func grimmoryStyle(_ style: DCHighlightStyle, keeping current: String) -> (colorHex: String?, style: String) {
-        if style == .underline { return (nil, "underline") }
-        let keep = current == "strikethrough" || current == "squiggly"
-        return (colors[style], keep ? current : "highlight")
-    }
-
-    /// Colors the kit can't draw (orange, the web's darker variants) show as yellow; the stored color is kept.
-    static func kitStyle(colorHex: String?, style: String) -> DCHighlightStyle {
-        if style == "underline" { return .underline }
-        guard let hex = colorHex?.uppercased() else { return .yellow }
-        return colors.first { $0.value == hex }?.key ?? .yellow
     }
 }
