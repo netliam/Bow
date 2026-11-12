@@ -77,6 +77,13 @@ public struct KeychainError: Error, Equatable {
     public let status: OSStatus
 }
 
+extension KeychainError: LocalizedError {
+    public var errorDescription: String? {
+        let reason = SecCopyErrorMessageString(status, nil) as String? ?? "error \(status)"
+        return "Bow couldn't use the Keychain (\(reason))."
+    }
+}
+
 /// Keeps tokens in memory only. For tests and previews.
 public actor InMemoryTokenStore: GrimmoryTokenStore {
     private var tokens: GrimmoryTokens?

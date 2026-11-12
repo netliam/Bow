@@ -6,7 +6,7 @@ import SwiftData
 
 /// Signs download requests for a server. `GrimmoryClient` is the real one; tests use a fake.
 public protocol BookFileSource: Sendable {
-    func downloadRequest(bookID: Int64, fileID: Int64) async throws -> URLRequest
+    func downloadRequest(bookID: Int64, additionalFileID: Int64?) async throws -> URLRequest
 }
 
 extension GrimmoryClient: BookFileSource {}
@@ -46,7 +46,7 @@ public final class DownloadCenter {
     @discardableResult
     public func download(_ file: BookFile) -> Task<Void, Never>? {
         guard file.downloadState != .downloading, file.downloadState != .downloaded else { return nil }
-        guard let book = file.book, let bookID = book.remoteID, let fileID = file.remoteFileID,
+        guard let book = file.book, let bookID = book.remoteID, file.remoteFileID != nil,
               let account = book.account, let source = source(account)
         else {
             failures[file.id] = "This book can't be downloaded."
@@ -61,7 +61,8 @@ public final class DownloadCenter {
 
         return Task {
             do {
-                transfer.start(try await source.downloadRequest(bookID: bookID, fileID: fileID), id: id)
+                // The catalog sync only records each book's primary file, so that's the one to fetch.
+                transfer.start(try await source.downloadRequest(bookID: bookID, additionalFileID: nil), id: id)
             } catch {
                 handle(.failed(id, error))
             }

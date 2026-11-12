@@ -38,6 +38,9 @@ final class BowReaderDelegate: DCReaderCoordsProtocol {
     func handleCoords(book _: DCEpubBook, spineIndex: Int, coords: String, chapterURL: URL?, isBookMark: Bool) {
         // Bookmarks arrive through `save(highlight:)` as `.bookMark` marks; this call is only the position.
         guard !isBookMark, let book else { return }
+        // The reader reports where it opened, too. That isn't reading: pushing it would replace a newer
+        // position from another device on the server, and bumping `updatedAt` would hide that position.
+        if book.progress?.kitCoords == coords, book.progress?.spineIndex == spineIndex { return }
         let progress = book.progress ?? {
             let progress = ReadingProgress(book: book)
             context.insert(progress)
