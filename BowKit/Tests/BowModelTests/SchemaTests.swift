@@ -63,3 +63,36 @@ import Testing
         #expect(queue.map(\.operation) == [.create, .update])
     }
 }
+
+@Suite struct MigrationTests {
+    /// A store written by schema V1 opens with the current schema, its data intact.
+    @Test func v1StoresOpenWithTheCurrentSchema() throws {
+        let url = FileManager.default.temporaryDirectory.appending(path: "bow-migration-\(UUID().uuidString).store")
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        do {
+            let schema = Schema(versionedSchema: BowSchemaV1.self)
+            let container = try ModelContainer(for: schema, configurations: [ModelConfiguration(schema: schema, url: url)])
+            let context = ModelContext(container)
+            let account = BowSchemaV1.Account(kind: .grimmory, displayName: "Home")
+            context.insert(account)
+            context.insert(BowSchemaV1.Book(account: account, remoteID: 7, title: "Dune"))
+            try context.save()
+        }
+
+        let schema = Schema(versionedSchema: BowSchemaV2.self)
+        let container = try ModelContainer(for: schema, migrationPlan: BowMigrationPlan.self,
+                                           configurations: [ModelConfiguration(schema: schema, url: url)])
+        let context = ModelContext(container)
+        let book = try #require(try context.fetch(FetchDescriptor<Book>()).first)
+        #expect(book.title == "Dune")
+        #expect(book.account?.displayName == "Home")
+        #expect(book.shelves.isEmpty)
+
+        let shelf = Shelf(account: book.account, remoteID: 1, kind: .regular, name: "Favorites")
+        context.insert(shelf)
+        shelf.books = [book]
+        try context.save()
+        #expect(book.shelves.map(\.name) == ["Favorites"])
+    }
+}

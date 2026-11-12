@@ -29,14 +29,20 @@ struct RootView: View {
                         .tag(LibrarySelection.account(local.id))
                 }
 
-                if !grimmoryAccounts.isEmpty {
-                    Section("Servers") {
-                        ForEach(grimmoryAccounts) { account in
-                            Label(account.displayName, systemImage: "server.rack")
-                                .tag(LibrarySelection.account(account.id))
-                                .contextMenu {
-                                    Button("Sign Out and Remove…", role: .destructive) { accountToRemove = account }
-                                }
+                ForEach(grimmoryAccounts) { account in
+                    Section(account.displayName) {
+                        Label("Library", systemImage: "server.rack")
+                            .tag(LibrarySelection.account(account.id))
+                            .contextMenu {
+                                Button("Sign Out and Remove…", role: .destructive) { accountToRemove = account }
+                            }
+                        ForEach(shelves(of: account, .regular)) { shelf in
+                            Label(shelf.name, systemImage: ShelfIcon.symbol(for: shelf))
+                                .tag(LibrarySelection.shelf(shelf.id))
+                        }
+                        ForEach(shelves(of: account, .magic)) { shelf in
+                            Label(shelf.name, systemImage: ShelfIcon.symbol(for: shelf))
+                                .tag(LibrarySelection.shelf(shelf.id))
                         }
                     }
                 }
@@ -50,7 +56,8 @@ struct RootView: View {
             }
         } detail: {
             NavigationStack {
-                LibraryView(accountID: selection?.accountID, isAddingServer: $isAddingServer, isImporting: $isImporting)
+                LibraryView(accountID: selection?.accountID, shelfID: selection?.shelfID,
+                            isAddingServer: $isAddingServer, isImporting: $isImporting)
                     .id(selection)
                     .navigationTitle(title)
             }
@@ -78,7 +85,16 @@ struct RootView: View {
 
     private var grimmoryAccounts: [Account] { accounts.filter { $0.kind == .grimmory } }
 
+    private func shelves(of account: Account, _ kind: Shelf.Kind) -> [Shelf] {
+        account.shelves
+            .filter { $0.kind == kind }
+            .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+    }
+
     private var title: String {
+        if let shelfID = selection?.shelfID {
+            return accounts.lazy.flatMap(\.shelves).first { $0.id == shelfID }?.name ?? "Shelf"
+        }
         guard let id = selection?.accountID else { return "All Books" }
         return accounts.first { $0.id == id }?.displayName ?? "Library"
     }
@@ -88,7 +104,9 @@ struct RootView: View {
             _ = try? await client.signOut()
         }
         GrimmoryAccounts.forget(accountID: account.id)
-        if selection?.accountID == account.id { selection = .all }
+        if selection?.accountID == account.id || account.shelves.contains(where: { $0.id == selection?.shelfID }) {
+            selection = .all
+        }
         for book in account.books { BookStorage.standard.removeFiles(for: book.id) }  // Downloads go too.
         modelContext.delete(account)
         try? modelContext.save()
@@ -98,8 +116,13 @@ struct RootView: View {
 enum LibrarySelection: Hashable {
     case all
     case account(UUID)
+    case shelf(UUID)
 
     var accountID: UUID? {
         if case .account(let id) = self { id } else { nil }
+    }
+
+    var shelfID: UUID? {
+        if case .shelf(let id) = self { id } else { nil }
     }
 }

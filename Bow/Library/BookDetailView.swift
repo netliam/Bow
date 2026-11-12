@@ -135,6 +135,8 @@ struct BookDetailView: View {
             }
             .pickerStyle(.menu)
 
+            shelvesRow
+
             HStack(spacing: 4) {
                 Text("Rating").foregroundStyle(.secondary)
                 Spacer()
@@ -153,6 +155,53 @@ struct BookDetailView: View {
         }
         .padding()
         .background(.background.secondary, in: .rect(cornerRadius: 12))
+    }
+
+    /// The account's regular shelves, to put the book on or take it off. Magic shelves are filters, so they're
+    /// listed but can't be toggled.
+    @ViewBuilder private var shelvesRow: some View {
+        let all = (book.account?.shelves ?? []).sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        let regular = all.filter { $0.kind == .regular }
+        if !isLocal, !all.isEmpty {
+            HStack {
+                Text("Shelves").foregroundStyle(.secondary)
+                Spacer()
+                Menu {
+                    ForEach(regular) { shelf in
+                        Toggle(isOn: shelfBinding(shelf)) {
+                            Label(shelf.name, systemImage: ShelfIcon.symbol(for: shelf))
+                        }
+                    }
+                    let magic = all.filter { $0.kind == .magic && $0.books.contains { $0.id == book.id } }
+                    if !magic.isEmpty {
+                        Section("Magic Shelves") {
+                            ForEach(magic) { shelf in
+                                Label(shelf.name, systemImage: ShelfIcon.symbol(for: shelf))
+                            }
+                        }
+                    }
+                } label: {
+                    Text(shelfSummary(regular))
+                        .lineLimit(1)
+                }
+                .menuActionDismissBehavior(.disabled)
+            }
+        }
+    }
+
+    private func shelfSummary(_ regular: [Shelf]) -> String {
+        let names = regular.filter { shelf in book.shelves.contains { $0.id == shelf.id } }.map(\.name)
+        return names.isEmpty ? "None" : names.formatted(.list(type: .and))
+    }
+
+    private func shelfBinding(_ shelf: Shelf) -> Binding<Bool> {
+        Binding {
+            book.shelves.contains { $0.id == shelf.id }
+        } set: { isOn in
+            ShelfOutbox.set(book, on: shelf, isOn, in: modelContext)
+            try? modelContext.save()
+            Task { await librarySync.pushChanges(modelContext.container) }
+        }
     }
 
     @ViewBuilder private var about: some View {

@@ -16251,12 +16251,7 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/Book"
-                  },
-                  "type": "array"
-                }
+                "schema": {}
               }
             },
             "description": "Books assigned/unassigned to shelves successfully"

@@ -1544,6 +1544,130 @@ internal struct Client: APIProtocol {
             }
         )
     }
+    /// List app shelves
+    ///
+    /// Retrieve all regular shelves visible to the current app user.
+    ///
+    /// - Remark: HTTP `GET /api/v1/app/shelves`.
+    /// - Remark: Generated from `#/paths//api/v1/app/shelves/get(appGetShelves)`.
+    internal func appGetShelves(_ input: Operations.AppGetShelves.Input) async throws -> Operations.AppGetShelves.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.AppGetShelves.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/api/v1/app/shelves",
+                    parameters: []
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .get
+                )
+                suppressMutabilityWarning(&request)
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                return (request, nil)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.AppGetShelves.Output.Ok.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            [Components.Schemas.AppShelfSummary].self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .ok(.init(body: body))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
+    /// List app magic shelves
+    ///
+    /// Retrieve all magic shelves visible to the current app user.
+    ///
+    /// - Remark: HTTP `GET /api/v1/app/shelves/magic`.
+    /// - Remark: Generated from `#/paths//api/v1/app/shelves/magic/get(appGetMagicShelves)`.
+    internal func appGetMagicShelves(_ input: Operations.AppGetMagicShelves.Input) async throws -> Operations.AppGetMagicShelves.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.AppGetMagicShelves.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/api/v1/app/shelves/magic",
+                    parameters: []
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .get
+                )
+                suppressMutabilityWarning(&request)
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                return (request, nil)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.AppGetMagicShelves.Output.Ok.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            [Components.Schemas.AppMagicShelfSummary].self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .ok(.init(body: body))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
     /// Login user
     ///
     /// Authenticate a user and return JWT tokens.
@@ -2243,6 +2367,77 @@ internal struct Client: APIProtocol {
                 switch response.status.code {
                 case 204:
                     return .noContent(.init())
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
+    /// Assign books to shelves
+    ///
+    /// Assign or unassign books to/from shelves.
+    ///
+    /// - Remark: HTTP `POST /api/v1/books/shelves`.
+    /// - Remark: Generated from `#/paths//api/v1/books/shelves/post(addBookToShelf)`.
+    internal func addBookToShelf(_ input: Operations.AddBookToShelf.Input) async throws -> Operations.AddBookToShelf.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.AddBookToShelf.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/api/v1/books/shelves",
+                    parameters: []
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .post
+                )
+                suppressMutabilityWarning(&request)
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                let body: OpenAPIRuntime.HTTPBody?
+                switch input.body {
+                case let .json(value):
+                    body = try converter.setRequiredRequestBodyAsJSON(
+                        value,
+                        headerFields: &request.headerFields,
+                        contentType: "application/json; charset=utf-8"
+                    )
+                }
+                return (request, body)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.AddBookToShelf.Output.Ok.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            OpenAPIRuntime.OpenAPIValueContainer.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .ok(.init(body: body))
                 default:
                     return .undocumented(
                         statusCode: response.status.code,

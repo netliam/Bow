@@ -6,18 +6,19 @@ import SwiftData
 // Models live inside a `VersionedSchema` from day one so later changes are explicit migrations. Enums are stored
 // as raw strings (SwiftData predicates on enum attributes are unreliable) with typed accessors.
 
-public typealias Account = BowSchemaV1.Account
-public typealias Book = BowSchemaV1.Book
-public typealias BookFile = BowSchemaV1.BookFile
-public typealias ReadingProgress = BowSchemaV1.ReadingProgress
-public typealias Annotation = BowSchemaV1.Annotation
-public typealias PendingChange = BowSchemaV1.PendingChange
+public typealias Account = BowSchemaV2.Account
+public typealias Book = BowSchemaV2.Book
+public typealias BookFile = BowSchemaV2.BookFile
+public typealias ReadingProgress = BowSchemaV2.ReadingProgress
+public typealias Annotation = BowSchemaV2.Annotation
+public typealias PendingChange = BowSchemaV2.PendingChange
+public typealias Shelf = BowSchemaV2.Shelf
 
-public enum BowSchemaV1: VersionedSchema {
-    public static let versionIdentifier = Schema.Version(1, 0, 0)
+public enum BowSchemaV2: VersionedSchema {
+    public static let versionIdentifier = Schema.Version(2, 0, 0)
 
     public static var models: [any PersistentModel.Type] {
-        [Account.self, Book.self, BookFile.self, ReadingProgress.self, Annotation.self, PendingChange.self]
+        [Account.self, Book.self, BookFile.self, ReadingProgress.self, Annotation.self, PendingChange.self, Shelf.self]
     }
 
     /// Where books come from. A `.local` account always exists for imported files. Tokens are never stored here;
@@ -33,6 +34,7 @@ public enum BowSchemaV1: VersionedSchema {
         public var displayName: String
         public var createdAt: Date
         @Relationship(deleteRule: .cascade, inverse: \Book.account) public var books: [Book] = []
+        @Relationship(deleteRule: .cascade, inverse: \Shelf.account) public var shelves: [Shelf] = []
 
         public var kind: Kind { Kind(rawValue: kindRaw) ?? .local }
 
@@ -71,6 +73,8 @@ public enum BowSchemaV1: VersionedSchema {
         @Relationship(deleteRule: .cascade, inverse: \BookFile.book) public var files: [BookFile] = []
         @Relationship(deleteRule: .cascade, inverse: \ReadingProgress.book) public var progress: ReadingProgress?
         @Relationship(deleteRule: .cascade, inverse: \Annotation.book) public var annotations: [Annotation] = []
+        /// Regular and magic shelves this book is on. Magic shelf membership is the server's answer as of the last sync.
+        public var shelves: [Shelf] = []
 
         public init(id: UUID = UUID(), account: Account?, remoteID: Int64? = nil, title: String, authors: [String] = []) {
             self.id = id
@@ -206,17 +210,46 @@ public enum BowSchemaV1: VersionedSchema {
             self.isParked = false
         }
     }
+
+    /// A Grimmory shelf: one the user fills by hand, or a magic shelf (a saved filter the server evaluates).
+    @Model
+    public final class Shelf {
+        public enum Kind: String, Codable, Sendable { case regular, magic }
+
+        @Attribute(.unique) public var id: UUID
+        public var account: Account?
+        /// Grimmory's id. Regular and magic shelves are numbered separately, so it's unique only with `kind`.
+        public var remoteID: Int64
+        public var kindRaw: String
+        public var name: String
+        /// A Lucide icon name from the web app (`heart`, `book-open`).
+        public var icon: String?
+        public var isPublic: Bool
+        @Relationship(inverse: \Book.shelves) public var books: [Book] = []
+
+        public var kind: Kind { Kind(rawValue: kindRaw) ?? .regular }
+
+        public init(id: UUID = UUID(), account: Account?, remoteID: Int64, kind: Kind, name: String) {
+            self.id = id
+            self.account = account
+            self.remoteID = remoteID
+            self.kindRaw = kind.rawValue
+            self.name = name
+            self.isPublic = false
+        }
+    }
 }
 
 public enum BowMigrationPlan: SchemaMigrationPlan {
-    public static var schemas: [any VersionedSchema.Type] { [BowSchemaV1.self] }
-    public static var stages: [MigrationStage] { [] }
+    public static var schemas: [any VersionedSchema.Type] { [BowSchemaV1.self, BowSchemaV2.self] }
+    /// V2 adds `Shelf` and the book–shelf relationship: nothing to convert.
+    public static var stages: [MigrationStage] { [.lightweight(fromVersion: BowSchemaV1.self, toVersion: BowSchemaV2.self)] }
 }
 
 public enum BowStore {
     /// The app's model container. `inMemory` is for tests and previews.
     public static func makeContainer(inMemory: Bool = false) throws -> ModelContainer {
-        let schema = Schema(versionedSchema: BowSchemaV1.self)
+        let schema = Schema(versionedSchema: BowSchemaV2.self)
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: inMemory)
         return try ModelContainer(for: schema, migrationPlan: BowMigrationPlan.self, configurations: [configuration])
     }
