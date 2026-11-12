@@ -14,11 +14,13 @@ let package = Package(
         .library(name: "BowModel", targets: ["BowModel"]),
         .library(name: "GrimmoryAPI", targets: ["GrimmoryAPI"]),
         .library(name: "BowSync", targets: ["BowSync"]),
+        .library(name: "BowLibrary", targets: ["BowLibrary"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-openapi-runtime", from: "1.13.4"),
         .package(url: "https://github.com/apple/swift-openapi-urlsession", from: "1.4.0"),
         .package(url: "https://github.com/apple/swift-http-types", from: "1.0.0"),
+        .package(url: "https://github.com/weichsel/ZIPFoundation", from: "0.9.20"),
     ],
     targets: [
         .target(name: "BowModel"),
@@ -32,8 +34,16 @@ let package = Package(
             exclude: ["openapi.json", "openapi-generator-config.yaml"]
         ),
         .target(name: "BowSync", dependencies: ["BowModel", "GrimmoryAPI"]),
+        .target(
+            name: "BowLibrary",
+            dependencies: ["BowModel", "GrimmoryAPI", .product(name: "ZIPFoundation", package: "ZIPFoundation")]
+        ),
         .testTarget(name: "BowModelTests", dependencies: ["BowModel"]),
         .testTarget(name: "BowSyncTests", dependencies: ["BowSync", "BowModel", "GrimmoryAPI"]),
+        .testTarget(
+            name: "BowLibraryTests",
+            dependencies: ["BowLibrary", "BowModel", .product(name: "ZIPFoundation", package: "ZIPFoundation")]
+        ),
         .testTarget(
             name: "GrimmoryAPITests",
             dependencies: [

@@ -32,6 +32,11 @@ Grimmory itself.
     the `0.1.0` report.
     - Confirmed from Grimmory's source: its web reader (foliate-js) takes the spine step from the real OPF
       (`CFI.fromElements($$itemref)`), so #12 is a real mismatch and not just theoretical.
+15. **Report a whole-book position to the delegate.** The reader already shows "11 of 39" pages, but
+    `handleCoords` only passes the spine index and chapter coords. So Bow estimates progress from chapter sizes
+    and counts from the start of the chapter: page 11 of 39 is reported as 17%, not 28%. Add the whole-book
+    fraction (or page and total) to `handleCoords`, or a separate delegate callback, and Bow will send that to
+    Grimmory instead.
 14. **Highlight colors that match Grimmory.** The web palette is yellow `#FACC15`, green `#4ADE80`, blue `#38BDF8`,
     pink `#F472B6` and orange `#FB923C`. The kit's `DCHighlightStyle` has `purple` instead of orange, so orange
     highlights from the web have nowhere to go.
