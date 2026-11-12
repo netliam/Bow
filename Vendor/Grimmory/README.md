@@ -26,7 +26,8 @@ Bow is licensed AGPL as well, so vendoring this file and generating code from it
    ```
    Or start a Grimmory server with `API_DOCS_ENABLED=true` and save `GET /api/openapi.json`.
 2. Replace the file here, and update the table above.
-3. Regenerate the client, then review the diff. Grimmory describes its API as unstable.
+3. Run `Scripts/generate-grimmory-api.sh`, which patches the spec and regenerates
+   `BowKit/Sources/GrimmoryAPI/Generated`. Then review the diff. Grimmory describes its API as unstable.
 
 Don't edit this file by hand. The fixes the generator needs (`*/*` → `application/json`, dropping
 `progressValid`, and others) belong in a patch step that reads this file. See `docs/grimmory-api.md`.

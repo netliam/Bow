@@ -17,6 +17,9 @@
       "version": {
         "up-to-next-minor-version": "0.1.0",
       },
+    }, {
+      "kind": "local",
+      "path": "BowKit",
     },
   ],
   "files": [
@@ -42,6 +45,14 @@
       ],
       "package-product-members": [
         {
+          "package": "BowKit",
+          "product-name": "BowModel",
+          "build-phase": { "build-phase": "frameworks" },
+        }, {
+          "package": "BowKit",
+          "product-name": "GrimmoryAPI",
+          "build-phase": { "build-phase": "frameworks" },
+        }, {
           "package": "DCEpubReaderKit",
           "product-name": "DCEpubReaderKit",
           "build-phase": { "build-phase": "frameworks" },

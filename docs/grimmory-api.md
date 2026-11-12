@@ -67,7 +67,8 @@ Legacy/other protocols, which Bow doesn't use: OPDS (`/api/v1/opds`, `/api/v2/op
 | `POST /api/v1/auth/logout` | Revokes the session |
 | `GET /api/v1/auth/oidc/state` | Server-issued `state` for OIDC |
 | `POST /api/v1/auth/oidc/mobile/callback` | Query params `code, code_verifier, redirect_uri, nonce, state` → `AccessTokenDto` |
-| `GET /api/v1/app/users/me` | Current user, including **permissions** |
+| `GET /api/v1/users/me` | Current user with the **full** permission set (`BookLoreUser`). Bow uses this one. |
+| `GET /api/v1/app/users/me` | Only `admin`, `canUpload`, `canDownload`, `canAccessBookdrop`, `maxFileUploadSizeMb`. Too little for gating the UI. |
 
 - **Lifetimes:** the access token lasts **2 hours** (`expires` is in seconds). The refresh token lasts **30 days**.
 - **Refresh tokens rotate.** Each refresh revokes the old token (`RefreshTokenService.refresh`). Bow must

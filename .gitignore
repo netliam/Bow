@@ -1,0 +1,3 @@
+.build-tools/
+BowKit/.build/
+BowKit/.swiftpm/
