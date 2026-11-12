@@ -7,10 +7,12 @@ import Testing
         let client = GrimmoryClient(serverURL: Fixtures.server, tokenStore: InMemoryTokenStore(Fixtures.tokens()),
                                     transport: FakeGrimmory())
 
-        let request = try await client.downloadRequest(bookID: 5, fileID: 50)
+        let primary = try await client.downloadRequest(bookID: 5)
+        let additional = try await client.downloadRequest(bookID: 5, additionalFileID: 50)
 
-        #expect(request.url?.absoluteString == "https://books.example.com/api/v1/books/5/files/50/download")
-        #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer A1")
+        #expect(primary.url?.absoluteString == "https://books.example.com/api/v1/books/5/download")
+        #expect(additional.url?.absoluteString == "https://books.example.com/api/v1/books/5/files/50/download")
+        #expect(primary.value(forHTTPHeaderField: "Authorization") == "Bearer A1")
     }
 
     @Test func downloadRequestRefreshesAnExpiringToken() async throws {
@@ -20,7 +22,7 @@ import Testing
         let client = GrimmoryClient(serverURL: Fixtures.server,
                                     tokenStore: InMemoryTokenStore(Fixtures.tokens(expiresIn: 5)), transport: server)
 
-        let request = try await client.downloadRequest(bookID: 5, fileID: 50)
+        let request = try await client.downloadRequest(bookID: 5)
 
         #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer A2")
     }

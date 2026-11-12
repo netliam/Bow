@@ -1,3 +1,4 @@
 .build-tools/
 BowKit/.build/
 BowKit/.swiftpm/
+.grimmory-dev.env

@@ -56,9 +56,9 @@ private func makeEPUB() throws -> URL {
 struct FakeFileSource: BookFileSource {
     var fail: (any Error)? = nil
 
-    func downloadRequest(bookID: Int64, fileID: Int64) async throws -> URLRequest {
+    func downloadRequest(bookID: Int64, additionalFileID: Int64?) async throws -> URLRequest {
         if let fail { throw fail }
-        return URLRequest(url: URL(string: "https://books.example.com/api/v1/books/\(bookID)/files/\(fileID)/download")!)
+        return URLRequest(url: URL(string: "https://books.example.com/api/v1/books/\(bookID)/download")!)
     }
 }
 
@@ -100,7 +100,7 @@ final class FakeTransfer: FileTransfer, @unchecked Sendable {
         let center = center()
         await center.download(file)?.value
         #expect(file.downloadState == .downloading)
-        #expect(transfer.started[file.id]?.url?.path() == "/api/v1/books/5/files/50/download")
+        #expect(transfer.started[file.id]?.url?.path() == "/api/v1/books/5/download")
 
         center.handle(.progress(file.id, 0.5))
         #expect(center.progress[file.id] == 0.5)

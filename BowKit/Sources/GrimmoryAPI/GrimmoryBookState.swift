@@ -73,10 +73,13 @@ extension GrimmoryClient {
 
     // MARK: Downloads
 
-    /// A signed request for one of a book's files, for a background `URLSession` to run. The token is valid for
-    /// at least a minute, which covers the request starting; Grimmory checks it only then.
-    public func downloadRequest(bookID: Int64, fileID: Int64) async throws -> URLRequest {
-        var request = URLRequest(url: serverURL.appending(path: "api/v1/books/\(bookID)/files/\(fileID)/download"))
+    /// A signed request for a book's primary file, or one of its additional files (other formats), for a
+    /// background `URLSession` to run. Grimmory rejects the primary file on the additional-file route (400), so
+    /// the two can't share it. The token is valid for at least a minute, which covers the request starting;
+    /// Grimmory checks it only then.
+    public func downloadRequest(bookID: Int64, additionalFileID: Int64? = nil) async throws -> URLRequest {
+        let path = additionalFileID.map { "api/v1/books/\(bookID)/files/\($0)/download" } ?? "api/v1/books/\(bookID)/download"
+        var request = URLRequest(url: serverURL.appending(path: path))
         request.setValue("Bearer \(try await session.validAccessToken())", forHTTPHeaderField: "Authorization")
         return request
     }

@@ -47,6 +47,21 @@ Checked in Bow's Simulator build:
     in Grimmory's web reader against `DCCFIConverter` output. This covers the script-stripping difference noted in
     the `0.1.0` report.
 
+    **Partly done (2026-11-12),** against a real Grimmory v3.5.0 (`Scripts/grimmory-dev.sh`):
+    - Bow's CFI for a position in chapter 1 (`epubcfi(/6/2[c1]!/4/18)`) was stored and read back unchanged.
+    - A CFI written straight to the server (`epubcfi(/6/6[c3]!/4/6)`) opened the right chapter and page.
+
+    Still to do: compare against positions and highlights made in Grimmory's *web reader*.
+16. **Progress before the book is counted.** Until the page count finishes, `DCReaderProgress.fraction` is the
+    chapter estimate. Chapters differ in length, so the same page can report quite different numbers.
+    - In a 3-chapter test book, page 5 of 39 reported 12.8% once counted, and 19.0% on reopening before the count
+      finished.
+    - Bow sends whatever arrives, so Grimmory's percentage jumps around.
+    - Options:
+      - Cache the page count per book and layout, so a reopen has it at once.
+      - Or hold back `handleProgress` until the count is done, and let the host decide what to do with
+        estimates (`page == nil`).
+
 ## Setup to know first
 
 - **Repo:** `~/Projects/DCEpubReaderKit`
