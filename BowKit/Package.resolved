@@ -1,5 +1,5 @@
 {
-  "originHash" : "350cedcc22708e5c4d11629d9855435bdabfb08d331998f9962ac27df2c3ed64",
+  "originHash" : "d4f779ab58db2934dcc96d3c005fbdb40b4ceb0727609fde15a1e462640c696a",
   "pins" : [
     {
       "identity" : "swift-collections",
@@ -35,6 +35,15 @@
       "state" : {
         "revision" : "c97e0f0187d95542b4a254f5bb4dc67f43bf73c9",
         "version" : "1.4.0"
+      }
+    },
+    {
+      "identity" : "zipfoundation",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/weichsel/ZIPFoundation",
+      "state" : {
+        "revision" : "22787ffb59de99e5dc1fbfe80b19c97a904ad48d",
+        "version" : "0.9.20"
       }
     }
   ],

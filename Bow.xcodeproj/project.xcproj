@@ -46,6 +46,10 @@
       "package-product-members": [
         {
           "package": "BowKit",
+          "product-name": "BowLibrary",
+          "build-phase": { "build-phase": "frameworks" },
+        }, {
+          "package": "BowKit",
           "product-name": "BowModel",
           "build-phase": { "build-phase": "frameworks" },
         }, {

@@ -60,7 +60,29 @@ Dependency direction: `App → BowReaders/BowSync/BowLibrary → BowModel`, `Bow
   - **Add Server:** reads the server's sign-in options and offers first-run setup, OIDC
     (`ASWebAuthenticationSession`), password, or proxy sign-in (a `WKWebView` that shares the proxy's cookies),
     followed by a forced password change when Grimmory requires one.
-- `BowLibrary` and `BowReaders` are created when they get their first code.
+- `BowLibrary`:
+  - `BookStorage` keeps downloads in `Application Support/Books/<book id>/`, excluded from backup, and unzips
+    EPUBs with ZIPFoundation into `epub/` on first open.
+  - `DownloadCenter` runs downloads with progress, failure reasons and remove/cancel.
+  - `ReadingFraction` estimates progress by chapter size, the way foliate-js does.
+- **Reading progress sync (`BowSync`):**
+  - `ProgressOutbox` keeps one pending change per book.
+  - `ProgressPusher` sends `fileProgress` with the CFI, href and percent. Server refusals (4xx) are parked, and
+    network errors back off from 30 seconds up to 1 hour.
+  - Progress is pushed after each reading session settles and before every catalog pull.
+- **Reader (app):**
+  - Tapping a book downloads it if needed, then opens it in DCEpubReaderKit, resuming at the saved kit position.
+  - `BowReaderDelegate` stores positions in `ReadingProgress`, converted to CFI two seconds after the reader
+    settles, and highlights, notes and bookmarks in `Annotation`, mapped to Grimmory's colours and styles.
+  - Annotations stay local until Phase 2.
+- **Not done yet:**
+  - Downloads run in the foreground only; they need a background `URLSession` before large libraries.
+  - There's no "continue from the server's position?" prompt when another device is ahead.
+  - The percentage counts from the start of the current chapter (kit follow-up #15).
+  - PDF and comics show a "not supported yet" message.
+  - The Mac reader opens full screen rather than in its own window.
+- `BowReaders` isn't needed yet: the EPUB adapter lives in the app, because the kit is iOS/Catalyst-only and would
+  stop `swift test` running on the Mac host.
 
 The generated code lives in `GrimmoryAPI/Generated` and is committed. Regenerate it with
 `Scripts/generate-grimmory-api.sh`, which patches the vendored spec, then runs swift-openapi-generator

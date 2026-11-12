@@ -11,11 +11,29 @@ final class LibrarySync {
     /// A sync problem worth telling the user about, e.g. an account that was signed out.
     var problem: String?
 
+    private var isPushing = false
+
+    /// Sends reading positions waiting in the outbox. Runs before every catalog pull, so the server's progress
+    /// already includes this device's reading when it comes back.
+    func pushProgress(_ container: ModelContainer) async {
+        guard !isPushing else { return }
+        isPushing = true
+        defer { isPushing = false }
+
+        var clients: [UUID: GrimmoryClient] = [:]
+        for account in (try? container.mainContext.fetch(FetchDescriptor<Account>())) ?? [] {
+            clients[account.id] = GrimmoryAccounts.client(for: account)
+        }
+        let destinations = clients
+        _ = await ProgressPusher(modelContainer: container).pushPending(to: { destinations[$0] })
+    }
+
     func syncAll(_ container: ModelContainer) async {
         guard !isSyncing else { return }
         isSyncing = true
         defer { isSyncing = false }
 
+        await pushProgress(container)
         let accounts = (try? container.mainContext.fetch(FetchDescriptor<Account>())) ?? []
         for account in accounts {
             guard let client = GrimmoryAccounts.client(for: account) else { continue }
