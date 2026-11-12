@@ -58,8 +58,10 @@ struct BookDetailView: View {
         }
     }
 
-    private var file: BookFile? { book.files.first { $0.format == .epub } }
+    private var file: BookFile? { book.readableFile }
     private var isLocal: Bool { book.account?.kind == .local }
+    /// Has a place in the book on this device: a CFI (EPUB) or a page (PDF).
+    private var hasStarted: Bool { book.progress?.cfi != nil || book.progress?.spineIndex != nil }
 
     // MARK: Sections
 
@@ -98,7 +100,7 @@ struct BookDetailView: View {
             switch file.downloadState {
             case .downloaded:
                 Button { read() } label: {
-                    Label(book.progress?.cfi == nil ? "Read" : "Continue Reading", systemImage: "book")
+                    Label(hasStarted ? "Continue Reading" : "Read", systemImage: "book")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
@@ -127,7 +129,7 @@ struct BookDetailView: View {
                 }
             }
         } else {
-            Label("Bow opens EPUB books for now. PDF and comic support are coming.", systemImage: "info.circle")
+            Label("Bow opens EPUB and PDF books for now. Comic support is coming.", systemImage: "info.circle")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }

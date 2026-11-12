@@ -12,6 +12,13 @@ private actor FakeDestination: BookStateDestination {
 
     func fail(with error: (any Error)?) { self.error = error }
 
+    private(set) var pdfPages: [Int] = []
+
+    func updatePDFProgress(bookID: Int64, fileID: Int64, page: Int, percentage: Double) async throws {
+        if let error { throw error }
+        pdfPages.append(page)
+    }
+
     func updateEpubProgress(bookID: Int64, fileID: Int64, cfi: String?, href: String?, percentage: Double) async throws {
         if let error { throw error }
         sent.append(Sent(bookID: bookID, fileID: fileID, cfi: cfi, percentage: percentage))
@@ -149,5 +156,28 @@ private actor FakeDestination: BookStateDestination {
         #expect(OutboxPusher.backoff(attempts: 1) == 30)
         #expect(OutboxPusher.backoff(attempts: 2) == 60)
         #expect(OutboxPusher.backoff(attempts: 20) == 3600)
+    }
+}
+
+@MainActor
+@Suite struct PDFProgressOutboxTests {
+    @Test func pdfPositionsGoOutAsPageNumbersFromOne() async throws {
+        let container = try BowStore.makeContainer(inMemory: true)
+        let context = container.mainContext
+        let account = Account(kind: .grimmory, displayName: "Home", serverURL: URL(string: "https://books.example.com"))
+        let book = Book(account: account, remoteID: 6, title: "Field Notes")
+        let progress = ReadingProgress(book: book, fraction: 5.0 / 12)
+        progress.spineIndex = 4  // The fifth page.
+        context.insert(account)
+        context.insert(book)
+        context.insert(BookFile(book: book, format: .pdf, remoteFileID: 60))
+        context.insert(progress)
+        BookOutbox.enqueue(.progress, bookID: book.id, in: context)
+        try context.save()
+        let server = FakeDestination()
+
+        #expect(await OutboxPusher(modelContainer: container).pushPending { _ in server }.sent == 1)
+        #expect(await server.pdfPages == [5])
+        #expect(await server.sent.isEmpty)  // Not sent as an EPUB position.
     }
 }

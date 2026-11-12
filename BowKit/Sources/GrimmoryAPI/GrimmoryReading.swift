@@ -11,6 +11,16 @@ public struct GrimmoryEpubProgress: Sendable, Equatable {
     public var lastReadTime: Date?
 }
 
+/// Where a reader is in a PDF, as Grimmory stores it.
+public struct GrimmoryPDFProgress: Sendable, Equatable {
+    /// From 1, as Grimmory's web viewer counts.
+    public var page: Int
+    /// 0–100.
+    public var percentage: Double
+    /// When the server last recorded reading (the book's `lastReadTime`).
+    public var lastReadTime: Date?
+}
+
 extension GrimmoryClient {
     // MARK: Reading progress
 
@@ -21,6 +31,19 @@ extension GrimmoryClient {
         guard let epub = dto.epubProgress else { return nil }
         return GrimmoryEpubProgress(cfi: epub.cfi, href: epub.href, percentage: Double(epub.percentage),
                                     lastReadTime: dto.lastReadTime)
+    }
+
+    public func pdfProgress(bookID: Int64) async throws -> GrimmoryPDFProgress? {
+        let output = try await unwrapped { try await client.getBookProgress(path: .init(bookId: bookID)) }
+        guard case .ok(let ok) = output else { throw GrimmoryError(status: statusCode(of: output)) }
+        let dto = try ok.body.json
+        guard let pdf = dto.pdfProgress else { return nil }
+        return GrimmoryPDFProgress(page: Int(pdf.page), percentage: Double(pdf.percentage), lastReadTime: dto.lastReadTime)
+    }
+
+    /// Records the page a reader is on in a PDF. Grimmory reads `positionData` as the page number, from 1.
+    public func updatePDFProgress(bookID: Int64, fileID: Int64, page: Int, percentage: Double) async throws {
+        try await updateEpubProgress(bookID: bookID, fileID: fileID, cfi: String(page), href: nil, percentage: percentage)
     }
 
     /// Records where the reader is in one file of a book. `cfi` is what Grimmory's web reader resumes from.

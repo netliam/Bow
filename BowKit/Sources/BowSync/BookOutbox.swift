@@ -6,6 +6,7 @@ import SwiftData
 /// Where per-book changes are sent. `GrimmoryClient` is the real one; tests use a fake.
 public protocol BookStateDestination: Sendable {
     func updateEpubProgress(bookID: Int64, fileID: Int64, cfi: String?, href: String?, percentage: Double) async throws
+    func updatePDFProgress(bookID: Int64, fileID: Int64, page: Int, percentage: Double) async throws
     func updateReadStatus(bookID: Int64, status: GrimmoryReadStatus) async throws
     func updateRating(bookID: Int64, rating: Int?) async throws
 }
@@ -79,11 +80,16 @@ public actor OutboxPusher {
             do {
                 switch kind {
                 case .progress:
-                    guard let fileID = book.files.first(where: { $0.format == .epub })?.remoteFileID,
-                          let progress = book.progress
+                    guard let file = book.readableFile, let fileID = file.remoteFileID, let progress = book.progress
                     else { break }
-                    try await server.updateEpubProgress(bookID: remoteID, fileID: fileID, cfi: progress.cfi,
-                                                        href: progress.href, percentage: progress.fraction * 100)
+                    if file.format == .pdf {
+                        guard let index = progress.spineIndex else { break }
+                        try await server.updatePDFProgress(bookID: remoteID, fileID: fileID, page: index + 1,
+                                                           percentage: progress.fraction * 100)
+                    } else {
+                        try await server.updateEpubProgress(bookID: remoteID, fileID: fileID, cfi: progress.cfi,
+                                                            href: progress.href, percentage: progress.fraction * 100)
+                    }
                 case .readStatus:
                     let status = book.readStatus.flatMap(GrimmoryReadStatus.init(rawValue:)) ?? .unset
                     try await server.updateReadStatus(bookID: remoteID, status: status)

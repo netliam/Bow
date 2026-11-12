@@ -18,7 +18,22 @@ struct ReaderScreen: View {
     @Environment(LibrarySync.self) private var librarySync
     @State private var reader: LoadedReader?
     @State private var choice: Choice?
+    @State private var pdf: PDFOpening?
+    @State private var pdfChoice: PDFChoice?
     @State private var failure: String?
+
+    /// A PDF to show, and the page to start on (from 0).
+    struct PDFOpening {
+        let url: URL
+        let page: Int
+    }
+
+    /// Both this device and the server have a page, and the server's is newer.
+    struct PDFChoice {
+        let url: URL
+        let serverPage: Int
+        let percentage: Double
+    }
 
     /// Built once: `DCReaderView` observes the view model it's given, so rebuilding it would restart the book.
     struct LoadedReader {
@@ -43,8 +58,20 @@ struct ReaderScreen: View {
         Group {
             if let reader {
                 reader.view
+            } else if let pdf {
+                PDFReaderView(book: book, url: pdf.url, startPage: pdf.page) { close() }
             } else if let choice {
-                choiceView(choice)
+                choiceView(serverPercentage: choice.server.percentage) {
+                    start(choice.epub, at: choice.server)
+                } stay: {
+                    start(choice.epub, at: nil)
+                }
+            } else if let pdfChoice {
+                choiceView(serverPercentage: pdfChoice.percentage) {
+                    pdf = PDFOpening(url: pdfChoice.url, page: pdfChoice.serverPage)
+                } stay: {
+                    pdf = PDFOpening(url: pdfChoice.url, page: book.progress?.spineIndex ?? 0)
+                }
             } else if let failure {
                 ContentUnavailableView {
                     Label("Can't Open This Book", systemImage: "book.closed")
@@ -60,18 +87,17 @@ struct ReaderScreen: View {
         .task { await load() }
     }
 
-    private func choiceView(_ choice: Choice) -> some View {
+    private func choiceView(serverPercentage: Double, goToServer: @escaping () -> Void,
+                            stay: @escaping () -> Void) -> some View {
         ContentUnavailableView {
             Label("Continue Where You Left Off?", systemImage: "arrow.triangle.2.circlepath")
         } description: {
-            Text("You read further on another device (\(Int(choice.server.percentage.rounded()))%). "
+            Text("You read further on another device (\(Int(serverPercentage.rounded()))%). "
                  + "On this device you're at \(Int(((book.progress?.fraction ?? 0) * 100).rounded()))%.")
         } actions: {
-            Button("Go to \(Int(choice.server.percentage.rounded()))%") {
-                start(choice.epub, at: choice.server)
-            }
-            .buttonStyle(.borderedProminent)
-            Button("Stay Here") { start(choice.epub, at: nil) }
+            Button("Go to \(Int(serverPercentage.rounded()))%", action: goToServer)
+                .buttonStyle(.borderedProminent)
+            Button("Stay Here", action: stay)
         }
     }
 
@@ -80,9 +106,13 @@ struct ReaderScreen: View {
     }
 
     private func load() async {
-        guard reader == nil, choice == nil else { return }
-        guard let path = book.files.first(where: { $0.format == .epub })?.localRelativePath else {
+        guard reader == nil, choice == nil, pdf == nil, pdfChoice == nil else { return }
+        guard let file = book.readableFile, let path = file.localRelativePath else {
             failure = "This book isn't downloaded."
+            return
+        }
+        if file.format == .pdf {
+            await loadPDF(BookStorage.standard.url(forRelativePath: path))
             return
         }
         let epub: DCEpubBook
@@ -105,6 +135,42 @@ struct ReaderScreen: View {
             start(epub, at: server)  // Never opened here: nothing to choose between.
         } else {
             choice = Choice(epub: epub, server: server)
+        }
+    }
+
+    /// Opens a PDF at this device's page, or the server's when it's newer (asking first if this device has one).
+    private func loadPDF(_ url: URL) async {
+        let local = book.progress?.spineIndex
+        guard let remoteID = book.remoteID, let account = book.account,
+              let client = GrimmoryAccounts.client(for: account)
+        else {
+            pdf = PDFOpening(url: url, page: local ?? 0)
+            return
+        }
+        let fetched = await withTaskGroup(of: GrimmoryPDFProgress??.self) { group in
+            group.addTask { try? await client.pdfProgress(bookID: remoteID) }
+            group.addTask {
+                try? await Task.sleep(for: .seconds(3))
+                return .some(nil)
+            }
+            let first = await group.next() ?? nil
+            group.cancelAll()
+            return first ?? nil
+        }
+        guard let server = fetched, server.page >= 1, server.page - 1 != local else {
+            pdf = PDFOpening(url: url, page: local ?? 0)
+            return
+        }
+        guard let local else {
+            pdf = PDFOpening(url: url, page: server.page - 1)  // Never opened here.
+            return
+        }
+        // As for EPUBs: this device's own pushes move `lastReadTime` too, so require a clear margin.
+        let localTime = book.progress?.updatedAt ?? .distantPast
+        if let serverTime = server.lastReadTime, serverTime > localTime.addingTimeInterval(60) {
+            pdfChoice = PDFChoice(url: url, serverPage: server.page - 1, percentage: server.percentage)
+        } else {
+            pdf = PDFOpening(url: url, page: local)
         }
     }
 
