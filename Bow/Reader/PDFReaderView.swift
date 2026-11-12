@@ -22,6 +22,10 @@ struct PDFReaderView: View {
     @State private var page = 0
     @State private var pageCount = 0
     @State private var showsControls = true
+    /// Set to jump there (from the scrubber); the PDF view clears it once it has.
+    @State private var jumpTo: Int?
+    /// The scrubber's page while dragging.
+    @State private var dragPage: Double?
     @State private var pushTask: Task<Void, Never>?
     @State private var selection: PDFSelection?
     @State private var clearSelection = 0
@@ -35,7 +39,7 @@ struct PDFReaderView: View {
     }
 
     var body: some View {
-        PDFKitView(url: url, startPage: startPage, highlights: highlights.map(DrawnHighlight.init),
+        PDFKitView(url: url, startPage: startPage, jumpTo: $jumpTo, highlights: highlights.map(DrawnHighlight.init),
                    clearSelection: clearSelection) { index, count in
             pageCount = count
             page = index
@@ -51,37 +55,34 @@ struct PDFReaderView: View {
             }
         }
         .ignoresSafeArea(edges: .bottom)
+        // The same floating chrome as the EPUB reader (DCEpubReaderKit's `DCReaderView`): glass buttons when
+        // shown, and just the title and page number, faint, while reading.
         .overlay(alignment: .top) {
-            if showsControls {
+            ZStack {
+                Text(book.title)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .padding(.horizontal, 72)
                 HStack {
-                    Button("Close", systemImage: "xmark", action: onClose)
-                        .labelStyle(.iconOnly)
-                        .buttonStyle(.bordered)
-                        .buttonBorderShape(.circle)
-                        .controlSize(.large)
+                    ReaderGlassButton(systemImage: "xmark", label: "Close", action: onClose)
                     Spacer()
-                    Text(book.title)
-                        .font(.subheadline.weight(.semibold))
-                        .lineLimit(1)
-                    Spacer()
-                    Color.clear.frame(width: 44, height: 44)
                 }
-                .padding(.horizontal)
-                .transition(.move(edge: .top).combined(with: .opacity))
+                .padding(.horizontal, 16)
+                .opacity(showsControls ? 1 : 0)
+                .allowsHitTesting(showsControls)
+                .accessibilityHidden(!showsControls)
             }
+            .frame(height: 52)
+            .animation(.easeInOut(duration: 0.2), value: showsControls)
         }
         .overlay(alignment: .bottom) {
             if let selection, !(selection.string ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 highlightBar(for: selection)
-            } else if showsControls, pageCount > 0 {
-                Text("\(page + 1) of \(pageCount)")
-                    .font(.footnote.monospacedDigit())
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(.regularMaterial, in: .capsule)
-                    .padding(.bottom, 24)
-                    .transition(.opacity)
-                    .accessibilityLabel("Page \(page + 1) of \(pageCount)")
+            } else if pageCount > 0 {
+                pageControls
+                    .frame(height: 60)
+                    .animation(.easeInOut(duration: 0.2), value: showsControls)
             }
         }
         .confirmationDialog("Highlight", isPresented: .init(get: { tappedHighlight != nil && !isEditingNote },
@@ -109,6 +110,37 @@ struct PDFReaderView: View {
         .onAppear {
             page = startPage
             sessions.activity(progress: nil, location: String(startPage + 1))
+        }
+    }
+
+    /// Scrubber and page number when the controls show; just the page number otherwise.
+    private var pageControls: some View {
+        let shown = Int((dragPage ?? Double(page)).rounded()) + 1
+        return VStack(spacing: 6) {
+            Slider(value: Binding(get: { dragPage ?? Double(page) }, set: { dragPage = $0 }),
+                   in: 0...Double(max(pageCount - 1, 1))) { editing in
+                if !editing, let dragPage {
+                    jumpTo = Int(dragPage.rounded())
+                    self.dragPage = nil
+                }
+            }
+            .tint(.secondary)
+            .frame(width: 220)
+            .opacity(showsControls ? 1 : 0)
+            .allowsHitTesting(showsControls)
+            Text("\(shown) of \(pageCount)")
+                .font(.subheadline.monospacedDigit())
+                .foregroundStyle(.secondary)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Page")
+        .accessibilityValue("\(page + 1) of \(pageCount)")
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: jumpTo = min(page + 1, pageCount - 1)
+            case .decrement: jumpTo = max(page - 1, 0)
+            @unknown default: break
+            }
         }
     }
 
@@ -228,6 +260,7 @@ private struct DrawnHighlight: Equatable {
 private struct PDFKitView: UIViewRepresentable {
     let url: URL
     let startPage: Int
+    @Binding var jumpTo: Int?
     let highlights: [DrawnHighlight]
     /// Changing it clears the text selection.
     let clearSelection: Int
@@ -244,6 +277,7 @@ private struct PDFKitView: UIViewRepresentable {
         view.displayDirection = .horizontal
         view.usePageViewController(true)
         view.backgroundColor = .systemBackground
+        view.pageShadowsEnabled = false  // Edge to edge, like the EPUB reader's pages.
         view.document = PDFDocument(url: url)
         if let document = view.document, let page = document.page(at: min(max(startPage, 0), document.pageCount - 1)) {
             view.go(to: page)
@@ -259,6 +293,14 @@ private struct PDFKitView: UIViewRepresentable {
         coordinator.parent = self
         if coordinator.drawn != highlights {
             coordinator.draw(highlights, in: view)
+        }
+        if let target = jumpTo, let page = view.document?.page(at: target) {
+            view.go(to: page)
+            // In page-view-controller mode `go(to:)` posts no page-changed notification, so report it here.
+            Task { @MainActor in
+                jumpTo = nil  // Not during this view update.
+                coordinator.report(view)
+            }
         }
         if coordinator.clearedSelection != clearSelection {
             coordinator.clearedSelection = clearSelection
@@ -369,5 +411,25 @@ extension Color {
         let value = UInt32(hex.trimmingCharacters(in: CharacterSet(charactersIn: "#")), radix: 16) ?? 0xFACC15
         self.init(red: Double((value >> 16) & 0xFF) / 255, green: Double((value >> 8) & 0xFF) / 255,
                   blue: Double(value & 0xFF) / 255)
+    }
+}
+
+/// A round Liquid Glass button, matching DCEpubReaderKit's reader buttons (44 pt, semibold symbol).
+struct ReaderGlassButton: View {
+    let systemImage: String
+    let label: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(.primary)
+                .frame(width: 44, height: 44)
+                .contentShape(.circle)
+                .glassEffect(.regular.interactive(), in: .circle)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
     }
 }
