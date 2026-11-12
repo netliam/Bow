@@ -81,6 +81,8 @@ struct BookDetailView: View {
                             .font(.body)
                             .multilineTextAlignment(.leading)
                     }
+                    .buttonStyle(.plain)  // Plain tinted text on Mac too, where links otherwise draw as buttons.
+                    .foregroundStyle(.tint)
                     .accessibilityHint("Shows this author's books.")
                 }
                 if let series = book.seriesName {
@@ -89,6 +91,8 @@ struct BookDetailView: View {
                             .font(.subheadline)
                             .multilineTextAlignment(.leading)
                     }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.tint)
                     .accessibilityHint("Shows the series.")
                 }
             }
