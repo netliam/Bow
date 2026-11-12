@@ -30,6 +30,15 @@ Grimmory itself.
 13. **Check CFIs against Grimmory.** Once Bow can talk to a server, compare a few positions and highlights made in
     Grimmory's web reader against `DCCFIConverter` output. This covers the script-stripping difference noted in
     the `0.1.0` report.
+    - Confirmed from Grimmory's source: its web reader (foliate-js) takes the spine step from the real OPF
+      (`CFI.fromElements($$itemref)`), so #12 is a real mismatch and not just theoretical.
+14. **Highlight colors that match Grimmory.** The web palette is yellow `#FACC15`, green `#4ADE80`, blue `#38BDF8`,
+    pink `#F472B6` and orange `#FB923C`. The kit's `DCHighlightStyle` has `purple` instead of orange, so orange
+    highlights from the web have nowhere to go.
+    - Add `orange`.
+    - Ideally, also let a highlight carry an arbitrary hex color, so the web's darker variants survive a round trip.
+    - Grimmory also has `strikethrough` and `squiggly` styles. Rendering them is optional. Bow keeps the original
+      style either way.
 
 ## Setup to know first
 

@@ -9,9 +9,8 @@ that Bow can't.
 
 EPUB rendering is handled by **DCEpubReaderKit** (fork: `github.com/netliam/DCEpubReaderKit`).
 
-> ⚠️ **Verify:** I wrote the Grimmory API and feature details from what I know of its BookLore lineage
-> (Spring Boot backend, Angular web app, JWT auth, OPDS/KOReader/Kobo endpoints). None of it was checked against
-> Grimmory's current source or OpenAPI spec. Step 1 of Phase 1 is to pull the spec and correct this doc.
+> Grimmory details below were checked against its source (`grimmory-tools/grimmory` @ `c80ce81`, 2026-11-11).
+> Endpoints, payloads and gotchas are in [grimmory-api.md](grimmory-api.md).
 
 ---
 
@@ -70,7 +69,7 @@ Dependency direction: `App → BowReaders/BowSync/BowLibrary → BowModel`, `Bow
 | `Book` | id (local UUID), accountId, remoteId?, title, authors, series, seriesIndex, formats, fileHash, metadata blob, coverPath | `remoteId` is nil for local-only imports. |
 | `BookFile` | bookId, format (epub/pdf/cbz), remoteFileId?, localPath?, size, downloadState | A book can have several formats. |
 | `ReadingProgress` | bookId, locator, percentage, updatedAt, deviceId | `locator` is defined in ADR-0003. |
-| `Annotation` | uuid, bookId, kind (highlight/note/bookmark), locator, text, note, style, created/updated/deletedAt | Soft-delete (tombstone) so deletes sync. |
+| `Annotation` | uuid, remoteId?, bookId, kind (highlight/note/bookmark), locator, text, note, color, style, created/updated/deletedAt | Soft-delete (tombstone) so deletes sync. Grimmory keeps highlights/notes and bookmarks as separate resources with `Long` ids, so `remoteId` is filled in after the first push. |
 | `Shelf` | id, remoteId?, name, kind (`.manual` / `.magic(rules)`), icon | Magic shelves are evaluated on the server; Bow caches the membership it's sent. |
 | `ReadStatus`, `Rating` | per book | Small user-state fields, synced. |
 | `PendingChange` | id, entity, entityId, op, payload, attempts, lastError | The outbox. |
@@ -85,41 +84,61 @@ id, and some books have none. The reader adapter maps Bow's `Book.id` ⇄ the ki
 Target: everything a regular user can do in the web app. Admin-only server setup is lower priority, and a
 "Open in web" fallback covers it at first.
 
-| Area | Web capability (verify) | Bow plan | Phase |
+Every feature is gated by the user's Grimmory **permissions** (`/app/users/me`). For example, without
+`canDownload` there's no offline reading at all.
+
+| Area | Grimmory API (see grimmory-api.md) | Bow plan | Phase |
 |---|---|---|---|
-| Auth | Username/password (JWT + refresh), OIDC | Native login; OIDC via `ASWebAuthenticationSession` | 1 |
-| Browse | Libraries, grid/list, sort, filter, search | Native, works offline from cache | 1 |
-| Book detail | Metadata, covers, formats, series, authors | Native | 1 |
-| Download / offline | Download file | Per-book "Keep offline", plus per-shelf auto-download | 1 |
-| Reading progress | Synced per book/format | Two-way, see ADR-0003 | 1 |
-| Read status & rating | Unread/reading/read, stars | Two-way | 1 |
-| Shelves | Manual shelves | Create/edit/add/remove, two-way | 2 |
-| Magic shelves | Rule-based shelves | Show (server-evaluated); edit rules in phase 3 | 2/3 |
-| Annotations | Highlights, notes, bookmarks in web reader | Two-way, needs locator mapping | 2 |
-| Metadata edit | Edit fields, fetch from providers, upload cover | Native editor; provider search through server | 3 |
-| Upload / Bookdrop | Upload files to library | Share sheet + Files import → upload | 3 |
-| Send to device/email | Kindle/email delivery | Call server endpoint | 3 |
-| Stats | Reading stats | Show server stats + local reading sessions | 3 |
-| Series / authors views | Browse by series/author | Native | 2 |
-| Admin (users, libraries, scanners, OPDS/Kobo/KOReader settings) | Admin panels | "Open in web" first; native later if worth it | 4 |
-| Other readers | PDF, comics (CBZ/CBR) | PDFKit for PDF (phase 2), image reader for CBZ (phase 3) | 2/3 |
+| Auth | `/auth/login`, `/auth/refresh` (rotating), `/auth/oidc/mobile/callback` | Native login; OIDC with PKCE via `ASWebAuthenticationSession` and `grimmory://oauth2-callback` | 1 |
+| Browse | `/app/books` (50 per page, about 35 filters), `/app/filter-options`, `/app/books/search` | Native, works offline from cache | 1 |
+| Home rows | `/app/books/continue-reading`, `recently-added`, `random` | "Reading Now" | 1 |
+| Book detail | `/app/books/{id}`, `/books/{id}/files`, `/media/book/{id}/cover` | Native | 1 |
+| Download / offline | `/books/{id}/download`, `/books/{id}/files/{fileId}/download` (no Range support) | Per-book "Keep offline", plus per-shelf auto-download | 1 |
+| Reading progress | `/app/books/{id}/progress` (CFI + percentage) | Two-way (ADR-0003) | 1 |
+| Read status & rating | `/app/books/{id}/status`, `/app/books/{id}/rating` | Two-way | 1 |
+| Reading sessions | `/reading-sessions` | Record locally, push. Feeds server stats. | 1 |
+| Shelves | `/shelves` CRUD, `/books/shelves` assignment | Two-way | 2 |
+| Magic shelves | `/app/shelves/magic/{id}/books` (read), `/api/magic-shelves` (edit) | Show in phase 2, edit rules in phase 3 | 2/3 |
+| Series / authors | `/app/series`, `/app/authors` | Native | 2 |
+| Annotations | `/annotations`, `/bookmarks`, `/v2/book-notes`, `/app/notebook` | Two-way highlights, notes and bookmarks, plus a Notebook screen | 2 |
+| Live updates | STOMP `/ws` queues | Foreground subscription | 2 |
+| PDF | `/pdf-annotations` | PDFKit reader | 2 |
+| Metadata edit | `/books/{id}/metadata`, `/metadata/prospective`, ISBN lookup, covers | Native editor (`canEditMetadata`) | 3 |
+| Upload / Bookdrop | `/files` upload, `/bookdrop/*` | Share sheet + Files import (`canUpload`, `canAccessBookdrop`) | 3 |
+| Send by email | `/email/book/{id}` | Share menu (`canEmailBook`) | 3 |
+| Stats | `/user-stats/reading/*` | Stats screen with Swift Charts | 3 |
+| Comics | `/media/book/{id}/cbx/pages/{n}` or download | Image reader | 3 |
+| Reviews, recommendations, duplicates | `/reviews`, `/books/{id}/recommendations`, `/books/duplicates` | Book detail extras | 3 |
+| Admin (users, libraries, tasks, OPDS/Kobo/KOReader, OIDC) | Admin controllers | "Open in web" first; native later if worth it | 4 |
+| Audiobooks | `/audiobooks/*` | Out of scope for v1. Don't rule it out in the model. | — |
 
 ---
 
 ## 5. Sync design (BowSync)
 
-- **Catalog pull:** on launch, on foreground, on pull-to-refresh, and in a `BGAppRefreshTask`. Use incremental
-  "changed since" queries if the API has them. Otherwise page through everything and diff by `remoteId` + updated
-  timestamp. Books missing from the server get marked removed, and their local files stay until the user deletes them.
+- **Catalog pull:** Grimmory has **no "changed since" query, and no metadata `updatedAt`**. So:
+  - **Full sync** (first login, then occasionally, e.g. daily or on pull-to-refresh): page `/app/books` at 50 per
+    page and upsert by `remoteId`. Skip rows whose summary hash hasn't changed.
+  - **Deletions:** `GET /app/books/ids` returns every ID in one call. Books missing from it are marked removed,
+    and their local files stay until the user deletes them.
+  - **In between:** while in the foreground, subscribe to the STOMP queues (`book-add`, `book-update`,
+    `books-remove`, `books-cover-update`) and refetch just those books. In the background, a `BGAppRefreshTask`
+    refreshes "continue reading" and the progress of books kept offline.
 - **Outbox push:** a `PendingChange` is written in the same SwiftData transaction as the change itself. The engine
   drains it in order, retrying with exponential backoff. A 4xx error parks the change and shows it in a
   "Sync issues" view instead of looping.
 - **Conflicts:**
   - Progress: furthest-read wins if it's within a few minutes of the other device's update, otherwise latest
     `updatedAt` wins. Show "Jump to page X from iPad?" when the server is ahead of an open book.
-  - Annotations: merge by `uuid`. Last-write-wins per annotation. Tombstones beat edits older than them.
+  - Annotations: match by `remoteId` (falling back to CFI + text for a first sync). Last-write-wins per
+    annotation using **server** timestamps only, since Grimmory's are `LocalDateTime` with no time zone. Tombstones
+    beat edits older than them. An update or delete waits for its create to return a `remoteId`.
   - Metadata/shelves: server wins, unless a local edit is still pending.
-- **Downloads:** background `URLSession` with resume data. Files go to `Application Support/Books/…`, which is
+- **Auth:** access tokens last 2 hours, and refresh tokens last 30 days and **rotate** on each use.
+  `GrimmoryClient` single-flights the refresh: one refresh in flight, and every other 401 waits for it. A
+  `session-revoked` message or a failed refresh signs the user out but keeps downloaded files.
+- **Downloads:** background `URLSession`. Grimmory has no Range support, so a failed download restarts from zero.
+  Only offered when the user has `canDownload`. Files go to `Application Support/Books/…`, which is
   excluded from backup, since the server can supply them again. Local imports are the exception and stay backed up.
 - **Concurrency:** `SyncEngine` is an `actor`. It writes through a `@ModelActor` and never touches the main context.
 
@@ -188,7 +207,8 @@ Bow needs changes in DCEpubReaderKit itself. They're tracked separately in
 - BowKit package skeleton, SwiftData container, Keychain wrapper, CI build for iOS + Mac.
 
 **Phase 1 — Read and stay in sync (MVP)**
-- Pull Grimmory's OpenAPI spec and verify §4. Generate or hand-write `GrimmoryAPI` (ADR-0004).
+- Get Grimmory's OpenAPI spec (`API_DOCS_ENABLED=true` → `/api/openapi.json`), vendor it, and generate
+  `GrimmoryAPI` (ADR-0004).
 - Local import (Files, share sheet, drag-and-drop on Mac) and EPUB reading via `EpubAdapter`.
 - Add a server, log in, browse, book detail, download/offline, progress + read-status sync.
 
@@ -205,8 +225,14 @@ Bow needs changes in DCEpubReaderKit itself. They're tracked separately in
 
 ## 10. Open questions
 
-1. **Grimmory source/spec:** is there a local checkout or a running server whose `/v3/api-docs` (or equivalent)
-   I can read? Everything in §4 depends on it.
+1. ~~**Grimmory spec source**~~: resolved. The nightly CI artifact works (OpenAPI 3.1, 404 operations). See
+   `grimmory-api.md`.
+7. ~~**Grimmory spec license**~~: resolved 2026-11-11. The spec is AGPL-3.0, and **Bow is AGPL**, so the spec is
+   vendored at `Vendor/Grimmory/grimmory-openapi.json` and the client is generated from it.
+5. **Book notes v2 vs annotation notes:** Grimmory has both. Map the kit's notes to annotations with a `note`
+   (recommended), and show v2 book notes read-only until it's clear how the web app uses them.
+6. **Users without `canDownload`:** show their books as online-only (stream-reading would need a different reader
+   path) or as unavailable? Recommendation: unavailable in v1, with an explanation.
 2. **Mac approach:** Catalyst (recommended, ADR-0001) or port the kit to AppKit?
 3. **Local-only device sync:** should users without a server get iCloud sync between their own devices? SwiftData +
    CloudKit is possible but adds model constraints (all fields optional, no unique constraints). Recommendation:
