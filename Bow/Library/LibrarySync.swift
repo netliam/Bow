@@ -13,8 +13,8 @@ final class LibrarySync {
 
     private var isPushing = false
 
-    /// Sends changes waiting in the outbox (reading positions, read status, ratings, annotations). Runs before
-    /// every catalog pull, so what comes back already includes this device's changes.
+    /// Sends changes waiting in the outbox (reading positions, read status, ratings, annotations, shelves). Runs
+    /// before every catalog pull, so what comes back already includes this device's changes.
     func pushChanges(_ container: ModelContainer) async {
         guard !isPushing else { return }
         isPushing = true
@@ -28,6 +28,7 @@ final class LibrarySync {
         _ = await OutboxPusher(modelContainer: container).pushPending(to: { destinations[$0] })
         // In the main context, where the reader edits them (see `AnnotationSyncer`).
         _ = await AnnotationSyncer(context: container.mainContext).pushPending(to: { destinations[$0] })
+        _ = await ShelfSyncer(context: container.mainContext).pushPending(to: { destinations[$0] })
     }
 
     func syncAll(_ container: ModelContainer) async {
@@ -41,6 +42,9 @@ final class LibrarySync {
             guard let client = GrimmoryAccounts.client(for: account) else { continue }
             do {
                 _ = try await CatalogSyncer(modelContainer: container).sync(accountID: account.id, from: client)
+                // After the catalog, so the books shelves point at exist. In the main context, where the detail
+                // page changes a book's shelves (see `ShelfSyncer`).
+                _ = try await ShelfSyncer(context: container.mainContext).pull(accountID: account.id, from: client)
                 problem = nil
             } catch GrimmoryError.signedOut {
                 problem = "You've been signed out of \(account.displayName). Remove the server and add it again to sign back in."

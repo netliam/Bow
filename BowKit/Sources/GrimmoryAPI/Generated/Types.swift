@@ -100,6 +100,20 @@ internal protocol APIProtocol: Sendable {
     /// - Remark: HTTP `GET /api/v1/app/libraries`.
     /// - Remark: Generated from `#/paths//api/v1/app/libraries/get(appGetLibraries)`.
     func appGetLibraries(_ input: Operations.AppGetLibraries.Input) async throws -> Operations.AppGetLibraries.Output
+    /// List app shelves
+    ///
+    /// Retrieve all regular shelves visible to the current app user.
+    ///
+    /// - Remark: HTTP `GET /api/v1/app/shelves`.
+    /// - Remark: Generated from `#/paths//api/v1/app/shelves/get(appGetShelves)`.
+    func appGetShelves(_ input: Operations.AppGetShelves.Input) async throws -> Operations.AppGetShelves.Output
+    /// List app magic shelves
+    ///
+    /// Retrieve all magic shelves visible to the current app user.
+    ///
+    /// - Remark: HTTP `GET /api/v1/app/shelves/magic`.
+    /// - Remark: Generated from `#/paths//api/v1/app/shelves/magic/get(appGetMagicShelves)`.
+    func appGetMagicShelves(_ input: Operations.AppGetMagicShelves.Input) async throws -> Operations.AppGetMagicShelves.Output
     /// Login user
     ///
     /// Authenticate a user and return JWT tokens.
@@ -170,6 +184,13 @@ internal protocol APIProtocol: Sendable {
     /// - Remark: HTTP `DELETE /api/v1/bookmarks/{bookmarkId}`.
     /// - Remark: Generated from `#/paths//api/v1/bookmarks/{bookmarkId}/delete(deleteBookmark)`.
     func deleteBookmark(_ input: Operations.DeleteBookmark.Input) async throws -> Operations.DeleteBookmark.Output
+    /// Assign books to shelves
+    ///
+    /// Assign or unassign books to/from shelves.
+    ///
+    /// - Remark: HTTP `POST /api/v1/books/shelves`.
+    /// - Remark: Generated from `#/paths//api/v1/books/shelves/post(addBookToShelf)`.
+    func addBookToShelf(_ input: Operations.AddBookToShelf.Input) async throws -> Operations.AddBookToShelf.Output
     /// Get a ping response
     ///
     /// Check if the application is responding
@@ -430,6 +451,24 @@ extension APIProtocol {
     internal func appGetLibraries(headers: Operations.AppGetLibraries.Input.Headers = .init()) async throws -> Operations.AppGetLibraries.Output {
         try await appGetLibraries(Operations.AppGetLibraries.Input(headers: headers))
     }
+    /// List app shelves
+    ///
+    /// Retrieve all regular shelves visible to the current app user.
+    ///
+    /// - Remark: HTTP `GET /api/v1/app/shelves`.
+    /// - Remark: Generated from `#/paths//api/v1/app/shelves/get(appGetShelves)`.
+    internal func appGetShelves(headers: Operations.AppGetShelves.Input.Headers = .init()) async throws -> Operations.AppGetShelves.Output {
+        try await appGetShelves(Operations.AppGetShelves.Input(headers: headers))
+    }
+    /// List app magic shelves
+    ///
+    /// Retrieve all magic shelves visible to the current app user.
+    ///
+    /// - Remark: HTTP `GET /api/v1/app/shelves/magic`.
+    /// - Remark: Generated from `#/paths//api/v1/app/shelves/magic/get(appGetMagicShelves)`.
+    internal func appGetMagicShelves(headers: Operations.AppGetMagicShelves.Input.Headers = .init()) async throws -> Operations.AppGetMagicShelves.Output {
+        try await appGetMagicShelves(Operations.AppGetMagicShelves.Input(headers: headers))
+    }
     /// Login user
     ///
     /// Authenticate a user and return JWT tokens.
@@ -563,6 +602,21 @@ extension APIProtocol {
     /// - Remark: Generated from `#/paths//api/v1/bookmarks/{bookmarkId}/delete(deleteBookmark)`.
     internal func deleteBookmark(path: Operations.DeleteBookmark.Input.Path) async throws -> Operations.DeleteBookmark.Output {
         try await deleteBookmark(Operations.DeleteBookmark.Input(path: path))
+    }
+    /// Assign books to shelves
+    ///
+    /// Assign or unassign books to/from shelves.
+    ///
+    /// - Remark: HTTP `POST /api/v1/books/shelves`.
+    /// - Remark: Generated from `#/paths//api/v1/books/shelves/post(addBookToShelf)`.
+    internal func addBookToShelf(
+        headers: Operations.AddBookToShelf.Input.Headers = .init(),
+        body: Operations.AddBookToShelf.Input.Body
+    ) async throws -> Operations.AddBookToShelf.Output {
+        try await addBookToShelf(Operations.AddBookToShelf.Input(
+            headers: headers,
+            body: body
+        ))
     }
     /// Get a ping response
     ///

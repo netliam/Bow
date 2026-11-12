@@ -801,6 +801,47 @@ extension Components {
                 case paths
             }
         }
+        /// - Remark: Generated from `#/components/schemas/AppMagicShelfSummary`.
+        internal struct AppMagicShelfSummary: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/AppMagicShelfSummary/icon`.
+            internal var icon: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/AppMagicShelfSummary/iconType`.
+            internal var iconType: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/AppMagicShelfSummary/id`.
+            internal var id: Swift.Int64?
+            /// - Remark: Generated from `#/components/schemas/AppMagicShelfSummary/name`.
+            internal var name: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/AppMagicShelfSummary/publicShelf`.
+            internal var publicShelf: Swift.Bool?
+            /// Creates a new `AppMagicShelfSummary`.
+            ///
+            /// - Parameters:
+            ///   - icon:
+            ///   - iconType:
+            ///   - id:
+            ///   - name:
+            ///   - publicShelf:
+            internal init(
+                icon: Swift.String? = nil,
+                iconType: Swift.String? = nil,
+                id: Swift.Int64? = nil,
+                name: Swift.String? = nil,
+                publicShelf: Swift.Bool? = nil
+            ) {
+                self.icon = icon
+                self.iconType = iconType
+                self.id = id
+                self.name = name
+                self.publicShelf = publicShelf
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case icon
+                case iconType
+                case id
+                case name
+                case publicShelf
+            }
+        }
         /// - Remark: Generated from `#/components/schemas/AppPageResponseAppBookSummary`.
         internal struct AppPageResponseAppBookSummary: Codable, Hashable, Sendable {
             /// - Remark: Generated from `#/components/schemas/AppPageResponseAppBookSummary/content`.
@@ -2502,6 +2543,37 @@ extension Components {
                 case data
                 case message
                 case status
+            }
+        }
+        /// Shelves assignment request
+        ///
+        /// - Remark: Generated from `#/components/schemas/ShelvesAssignmentRequest`.
+        internal struct ShelvesAssignmentRequest: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/ShelvesAssignmentRequest/bookIds`.
+            internal var bookIds: [Swift.Int64]?
+            /// - Remark: Generated from `#/components/schemas/ShelvesAssignmentRequest/shelvesToAssign`.
+            internal var shelvesToAssign: [Swift.Int64]?
+            /// - Remark: Generated from `#/components/schemas/ShelvesAssignmentRequest/shelvesToUnassign`.
+            internal var shelvesToUnassign: [Swift.Int64]?
+            /// Creates a new `ShelvesAssignmentRequest`.
+            ///
+            /// - Parameters:
+            ///   - bookIds:
+            ///   - shelvesToAssign:
+            ///   - shelvesToUnassign:
+            internal init(
+                bookIds: [Swift.Int64]? = nil,
+                shelvesToAssign: [Swift.Int64]? = nil,
+                shelvesToUnassign: [Swift.Int64]? = nil
+            ) {
+                self.bookIds = bookIds
+                self.shelvesToAssign = shelvesToAssign
+                self.shelvesToUnassign = shelvesToUnassign
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case bookIds
+                case shelvesToAssign
+                case shelvesToUnassign
             }
         }
         /// - Remark: Generated from `#/components/schemas/SidebarSortOption`.

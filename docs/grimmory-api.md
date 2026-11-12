@@ -246,6 +246,18 @@ What Bow does (`BowSync/AnnotationSync.swift`, checked against a real Grimmory v
 
 ## Shelves, metadata, and other web features
 
+**Shelves in Bow** (`BowSync/ShelfSync.swift`, checked against Grimmory v3.5.0):
+- **Lists:** `GET /api/v1/app/shelves` and `GET /api/v1/app/shelves/magic`. Regular and magic shelf IDs are
+  separate sequences. Every user starts with a "Favorites" shelf.
+- **Membership:** `GET /api/v1/app/books/ids?shelfId=…` or `?magicShelfId=…`: one call per shelf. The server
+  evaluates magic shelves' `filterJson`, so Bow never needs to read their rules.
+- **Changes:** `POST /api/v1/books/shelves` with `{bookIds, shelvesToAssign, shelvesToUnassign}`. It answers with
+  full `Book` entities, which Bow doesn't read (the patch script leaves that body untyped).
+- **Sync:** the server wins, unless a book has a shelf change still queued. Changes are queued per book as an
+  add/remove delta, so undoing a change before it's sent cancels it.
+- **Not in Bow yet:** creating, renaming and deleting shelves, and editing magic shelves.
+
+
 | Feature | Endpoints |
 |---|---|
 | Shelves CRUD | `GET /api/v1/shelves`, `POST /api/v1/shelves`, `GET /api/v1/shelves/{id}`, `PUT /api/v1/shelves/{id}`, `DELETE /api/v1/shelves/{id}`, `GET /api/v1/shelves/{id}/books` |

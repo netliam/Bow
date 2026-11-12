@@ -43,3 +43,7 @@ filter:
     - createBookmark
     - updateBookmark
     - deleteBookmark
+    # Shelves
+    - appGetShelves
+    - appGetMagicShelves
+    - addBookToShelf

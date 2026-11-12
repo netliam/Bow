@@ -7,6 +7,7 @@ import SwiftUI
 /// Tapping a book opens its detail page; EPUB files dropped on the grid are imported.
 struct LibraryView: View {
     let accountID: UUID?
+    let shelfID: UUID?
     @Binding var isAddingServer: Bool
     @Binding var isImporting: Bool
 
@@ -16,12 +17,15 @@ struct LibraryView: View {
     @Environment(LocalImporter.self) private var importer
     @Query private var books: [Book]
 
-    init(accountID: UUID?, isAddingServer: Binding<Bool>, isImporting: Binding<Bool>) {
+    init(accountID: UUID?, shelfID: UUID? = nil, isAddingServer: Binding<Bool>, isImporting: Binding<Bool>) {
         self.accountID = accountID
+        self.shelfID = shelfID
         self._isAddingServer = isAddingServer
         self._isImporting = isImporting
         let filter: Predicate<Book>
-        if let accountID {
+        if let shelfID {
+            filter = #Predicate { book in !book.isRemovedOnServer && book.shelves.contains { $0.id == shelfID } }
+        } else if let accountID {
             filter = #Predicate { !$0.isRemovedOnServer && $0.account?.id == accountID }
         } else {
             filter = #Predicate { !$0.isRemovedOnServer }
