@@ -473,6 +473,298 @@ internal enum Operations {
             case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
         }
     }
+    /// List app authors
+    ///
+    /// Retrieve paginated authors for the app with optional filtering and sorting.
+    ///
+    /// - Remark: HTTP `GET /api/v1/app/authors`.
+    /// - Remark: Generated from `#/paths//api/v1/app/authors/get(appGetAuthors)`.
+    internal enum AppGetAuthors {
+        internal static let id: Swift.String = "appGetAuthors"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/api/v1/app/authors/GET/query`.
+            internal struct Query: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/api/v1/app/authors/GET/query/page`.
+                internal var page: Swift.Int32?
+                /// - Remark: Generated from `#/paths/api/v1/app/authors/GET/query/size`.
+                internal var size: Swift.Int32?
+                /// - Remark: Generated from `#/paths/api/v1/app/authors/GET/query/sort`.
+                internal var sort: Swift.String?
+                /// - Remark: Generated from `#/paths/api/v1/app/authors/GET/query/dir`.
+                internal var dir: Swift.String?
+                /// - Remark: Generated from `#/paths/api/v1/app/authors/GET/query/libraryId`.
+                internal var libraryId: Swift.Int64?
+                /// - Remark: Generated from `#/paths/api/v1/app/authors/GET/query/search`.
+                internal var search: Swift.String?
+                /// - Remark: Generated from `#/paths/api/v1/app/authors/GET/query/hasPhoto`.
+                internal var hasPhoto: Swift.Bool?
+                /// Creates a new `Query`.
+                ///
+                /// - Parameters:
+                ///   - page:
+                ///   - size:
+                ///   - sort:
+                ///   - dir:
+                ///   - libraryId:
+                ///   - search:
+                ///   - hasPhoto:
+                internal init(
+                    page: Swift.Int32? = nil,
+                    size: Swift.Int32? = nil,
+                    sort: Swift.String? = nil,
+                    dir: Swift.String? = nil,
+                    libraryId: Swift.Int64? = nil,
+                    search: Swift.String? = nil,
+                    hasPhoto: Swift.Bool? = nil
+                ) {
+                    self.page = page
+                    self.size = size
+                    self.sort = sort
+                    self.dir = dir
+                    self.libraryId = libraryId
+                    self.search = search
+                    self.hasPhoto = hasPhoto
+                }
+            }
+            internal var query: Operations.AppGetAuthors.Input.Query
+            /// - Remark: Generated from `#/paths/api/v1/app/authors/GET/header`.
+            internal struct Headers: Sendable, Hashable {
+                internal var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.AppGetAuthors.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                internal init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.AppGetAuthors.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            internal var headers: Operations.AppGetAuthors.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - query:
+            ///   - headers:
+            internal init(
+                query: Operations.AppGetAuthors.Input.Query = .init(),
+                headers: Operations.AppGetAuthors.Input.Headers = .init()
+            ) {
+                self.query = query
+                self.headers = headers
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/api/v1/app/authors/GET/responses/200/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/api/v1/app/authors/GET/responses/200/content/application\/json`.
+                    case json(Components.Schemas.AppPageResponseAppAuthorSummary)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.AppPageResponseAppAuthorSummary {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.AppGetAuthors.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.AppGetAuthors.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// OK
+            ///
+            /// - Remark: Generated from `#/paths//api/v1/app/authors/get(appGetAuthors)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.AppGetAuthors.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            internal var ok: Operations.AppGetAuthors.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        internal enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            internal init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            internal var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            internal static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// Get app author details
+    ///
+    /// Retrieve detailed app-facing information for a single author.
+    ///
+    /// - Remark: HTTP `GET /api/v1/app/authors/{authorId}`.
+    /// - Remark: Generated from `#/paths//api/v1/app/authors/{authorId}/get(appGetAuthorDetail)`.
+    internal enum AppGetAuthorDetail {
+        internal static let id: Swift.String = "appGetAuthorDetail"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/api/v1/app/authors/{authorId}/GET/path`.
+            internal struct Path: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/api/v1/app/authors/{authorId}/GET/path/authorId`.
+                internal var authorId: Swift.Int64
+                /// Creates a new `Path`.
+                ///
+                /// - Parameters:
+                ///   - authorId:
+                internal init(authorId: Swift.Int64) {
+                    self.authorId = authorId
+                }
+            }
+            internal var path: Operations.AppGetAuthorDetail.Input.Path
+            /// - Remark: Generated from `#/paths/api/v1/app/authors/{authorId}/GET/header`.
+            internal struct Headers: Sendable, Hashable {
+                internal var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.AppGetAuthorDetail.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                internal init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.AppGetAuthorDetail.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            internal var headers: Operations.AppGetAuthorDetail.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - path:
+            ///   - headers:
+            internal init(
+                path: Operations.AppGetAuthorDetail.Input.Path,
+                headers: Operations.AppGetAuthorDetail.Input.Headers = .init()
+            ) {
+                self.path = path
+                self.headers = headers
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/api/v1/app/authors/{authorId}/GET/responses/200/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/api/v1/app/authors/{authorId}/GET/responses/200/content/application\/json`.
+                    case json(Components.Schemas.AppAuthorDetail)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.AppAuthorDetail {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.AppGetAuthorDetail.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.AppGetAuthorDetail.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// OK
+            ///
+            /// - Remark: Generated from `#/paths//api/v1/app/authors/{authorId}/get(appGetAuthorDetail)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.AppGetAuthorDetail.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            internal var ok: Operations.AppGetAuthorDetail.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        internal enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            internal init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            internal var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            internal static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
     /// List app books
     ///
     /// Retrieve paginated books for the app with optional filtering and sorting.
@@ -3910,6 +4202,328 @@ internal enum Operations {
                     .json
                 ]
             }
+        }
+    }
+    /// Get PDF annotations for a book
+    ///
+    /// Retrieve serialized PDF annotations for a specific book.
+    ///
+    /// - Remark: HTTP `GET /api/v1/pdf-annotations/book/{bookId}`.
+    /// - Remark: Generated from `#/paths//api/v1/pdf-annotations/book/{bookId}/get(getAnnotations)`.
+    internal enum GetAnnotations {
+        internal static let id: Swift.String = "getAnnotations"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/api/v1/pdf-annotations/book/{bookId}/GET/path`.
+            internal struct Path: Sendable, Hashable {
+                /// ID of the book
+                ///
+                /// - Remark: Generated from `#/paths/api/v1/pdf-annotations/book/{bookId}/GET/path/bookId`.
+                internal var bookId: Swift.Int64
+                /// Creates a new `Path`.
+                ///
+                /// - Parameters:
+                ///   - bookId: ID of the book
+                internal init(bookId: Swift.Int64) {
+                    self.bookId = bookId
+                }
+            }
+            internal var path: Operations.GetAnnotations.Input.Path
+            /// - Remark: Generated from `#/paths/api/v1/pdf-annotations/book/{bookId}/GET/header`.
+            internal struct Headers: Sendable, Hashable {
+                internal var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.GetAnnotations.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                internal init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.GetAnnotations.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            internal var headers: Operations.GetAnnotations.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - path:
+            ///   - headers:
+            internal init(
+                path: Operations.GetAnnotations.Input.Path,
+                headers: Operations.GetAnnotations.Input.Headers = .init()
+            ) {
+                self.path = path
+                self.headers = headers
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/api/v1/pdf-annotations/book/{bookId}/GET/responses/200/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/api/v1/pdf-annotations/book/{bookId}/GET/responses/200/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// A container of undocumented properties.
+                        internal var additionalProperties: [String: Swift.String]
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - additionalProperties: A container of undocumented properties.
+                        internal init(additionalProperties: [String: Swift.String] = .init()) {
+                            self.additionalProperties = additionalProperties
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            additionalProperties = try decoder.decodeAdditionalProperties(knownKeys: [])
+                        }
+                        internal func encode(to encoder: any Swift.Encoder) throws {
+                            try encoder.encodeAdditionalProperties(additionalProperties)
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/api/v1/pdf-annotations/book/{bookId}/GET/responses/200/content/application\/json`.
+                    case json(Operations.GetAnnotations.Output.Ok.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.GetAnnotations.Output.Ok.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.GetAnnotations.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.GetAnnotations.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Annotations returned successfully
+            ///
+            /// - Remark: Generated from `#/paths//api/v1/pdf-annotations/book/{bookId}/get(getAnnotations)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.GetAnnotations.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            internal var ok: Operations.GetAnnotations.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct NoContent: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/api/v1/pdf-annotations/book/{bookId}/GET/responses/204/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/api/v1/pdf-annotations/book/{bookId}/GET/responses/204/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// A container of undocumented properties.
+                        internal var additionalProperties: [String: Swift.String]
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - additionalProperties: A container of undocumented properties.
+                        internal init(additionalProperties: [String: Swift.String] = .init()) {
+                            self.additionalProperties = additionalProperties
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            additionalProperties = try decoder.decodeAdditionalProperties(knownKeys: [])
+                        }
+                        internal func encode(to encoder: any Swift.Encoder) throws {
+                            try encoder.encodeAdditionalProperties(additionalProperties)
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/api/v1/pdf-annotations/book/{bookId}/GET/responses/204/content/application\/json`.
+                    case json(Operations.GetAnnotations.Output.NoContent.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.GetAnnotations.Output.NoContent.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.GetAnnotations.Output.NoContent.Body
+                /// Creates a new `NoContent`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.GetAnnotations.Output.NoContent.Body) {
+                    self.body = body
+                }
+            }
+            /// No annotations found
+            ///
+            /// - Remark: Generated from `#/paths//api/v1/pdf-annotations/book/{bookId}/get(getAnnotations)/responses/204`.
+            ///
+            /// HTTP response code: `204 noContent`.
+            case noContent(Operations.GetAnnotations.Output.NoContent)
+            /// The associated value of the enum case if `self` is `.noContent`.
+            ///
+            /// - Throws: An error if `self` is not `.noContent`.
+            /// - SeeAlso: `.noContent`.
+            internal var noContent: Operations.GetAnnotations.Output.NoContent {
+                get throws {
+                    switch self {
+                    case let .noContent(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "noContent",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        internal enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            internal init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            internal var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            internal static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// Save PDF annotations for a book
+    ///
+    /// Save or update serialized PDF annotations for a specific book.
+    ///
+    /// - Remark: HTTP `PUT /api/v1/pdf-annotations/book/{bookId}`.
+    /// - Remark: Generated from `#/paths//api/v1/pdf-annotations/book/{bookId}/put(saveAnnotations)`.
+    internal enum SaveAnnotations {
+        internal static let id: Swift.String = "saveAnnotations"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/api/v1/pdf-annotations/book/{bookId}/PUT/path`.
+            internal struct Path: Sendable, Hashable {
+                /// ID of the book
+                ///
+                /// - Remark: Generated from `#/paths/api/v1/pdf-annotations/book/{bookId}/PUT/path/bookId`.
+                internal var bookId: Swift.Int64
+                /// Creates a new `Path`.
+                ///
+                /// - Parameters:
+                ///   - bookId: ID of the book
+                internal init(bookId: Swift.Int64) {
+                    self.bookId = bookId
+                }
+            }
+            internal var path: Operations.SaveAnnotations.Input.Path
+            /// - Remark: Generated from `#/paths/api/v1/pdf-annotations/book/{bookId}/PUT/requestBody`.
+            internal enum Body: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/api/v1/pdf-annotations/book/{bookId}/PUT/requestBody/json`.
+                internal struct JsonPayload: Codable, Hashable, Sendable {
+                    /// A container of undocumented properties.
+                    internal var additionalProperties: [String: Swift.String]
+                    /// Creates a new `JsonPayload`.
+                    ///
+                    /// - Parameters:
+                    ///   - additionalProperties: A container of undocumented properties.
+                    internal init(additionalProperties: [String: Swift.String] = .init()) {
+                        self.additionalProperties = additionalProperties
+                    }
+                    internal init(from decoder: any Swift.Decoder) throws {
+                        additionalProperties = try decoder.decodeAdditionalProperties(knownKeys: [])
+                    }
+                    internal func encode(to encoder: any Swift.Encoder) throws {
+                        try encoder.encodeAdditionalProperties(additionalProperties)
+                    }
+                }
+                /// - Remark: Generated from `#/paths/api/v1/pdf-annotations/book/{bookId}/PUT/requestBody/content/application\/json`.
+                case json(Operations.SaveAnnotations.Input.Body.JsonPayload)
+            }
+            internal var body: Operations.SaveAnnotations.Input.Body
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - path:
+            ///   - body:
+            internal init(
+                path: Operations.SaveAnnotations.Input.Path,
+                body: Operations.SaveAnnotations.Input.Body
+            ) {
+                self.path = path
+                self.body = body
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct NoContent: Sendable, Hashable {
+                /// Creates a new `NoContent`.
+                internal init() {}
+            }
+            /// Annotations saved successfully
+            ///
+            /// - Remark: Generated from `#/paths//api/v1/pdf-annotations/book/{bookId}/put(saveAnnotations)/responses/204`.
+            ///
+            /// HTTP response code: `204 noContent`.
+            case noContent(Operations.SaveAnnotations.Output.NoContent)
+            /// Annotations saved successfully
+            ///
+            /// - Remark: Generated from `#/paths//api/v1/pdf-annotations/book/{bookId}/put(saveAnnotations)/responses/204`.
+            ///
+            /// HTTP response code: `204 noContent`.
+            internal static var noContent: Self {
+                .noContent(.init())
+            }
+            /// The associated value of the enum case if `self` is `.noContent`.
+            ///
+            /// - Throws: An error if `self` is not `.noContent`.
+            /// - SeeAlso: `.noContent`.
+            internal var noContent: Operations.SaveAnnotations.Output.NoContent {
+                get throws {
+                    switch self {
+                    case let .noContent(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "noContent",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
         }
     }
     /// Get public app settings

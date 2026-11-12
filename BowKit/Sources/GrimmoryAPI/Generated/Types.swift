@@ -31,6 +31,20 @@ internal protocol APIProtocol: Sendable {
     /// - Remark: HTTP `DELETE /api/v1/annotations/{annotationId}`.
     /// - Remark: Generated from `#/paths//api/v1/annotations/{annotationId}/delete(deleteAnnotation)`.
     func deleteAnnotation(_ input: Operations.DeleteAnnotation.Input) async throws -> Operations.DeleteAnnotation.Output
+    /// List app authors
+    ///
+    /// Retrieve paginated authors for the app with optional filtering and sorting.
+    ///
+    /// - Remark: HTTP `GET /api/v1/app/authors`.
+    /// - Remark: Generated from `#/paths//api/v1/app/authors/get(appGetAuthors)`.
+    func appGetAuthors(_ input: Operations.AppGetAuthors.Input) async throws -> Operations.AppGetAuthors.Output
+    /// Get app author details
+    ///
+    /// Retrieve detailed app-facing information for a single author.
+    ///
+    /// - Remark: HTTP `GET /api/v1/app/authors/{authorId}`.
+    /// - Remark: Generated from `#/paths//api/v1/app/authors/{authorId}/get(appGetAuthorDetail)`.
+    func appGetAuthorDetail(_ input: Operations.AppGetAuthorDetail.Input) async throws -> Operations.AppGetAuthorDetail.Output
     /// List app books
     ///
     /// Retrieve paginated books for the app with optional filtering and sorting.
@@ -198,6 +212,20 @@ internal protocol APIProtocol: Sendable {
     /// - Remark: HTTP `GET /api/v1/healthcheck`.
     /// - Remark: Generated from `#/paths//api/v1/healthcheck/get(getPing)`.
     func getPing(_ input: Operations.GetPing.Input) async throws -> Operations.GetPing.Output
+    /// Get PDF annotations for a book
+    ///
+    /// Retrieve serialized PDF annotations for a specific book.
+    ///
+    /// - Remark: HTTP `GET /api/v1/pdf-annotations/book/{bookId}`.
+    /// - Remark: Generated from `#/paths//api/v1/pdf-annotations/book/{bookId}/get(getAnnotations)`.
+    func getAnnotations(_ input: Operations.GetAnnotations.Input) async throws -> Operations.GetAnnotations.Output
+    /// Save PDF annotations for a book
+    ///
+    /// Save or update serialized PDF annotations for a specific book.
+    ///
+    /// - Remark: HTTP `PUT /api/v1/pdf-annotations/book/{bookId}`.
+    /// - Remark: Generated from `#/paths//api/v1/pdf-annotations/book/{bookId}/put(saveAnnotations)`.
+    func saveAnnotations(_ input: Operations.SaveAnnotations.Input) async throws -> Operations.SaveAnnotations.Output
     /// Get public app settings
     ///
     /// Retrieve public application settings.
@@ -299,6 +327,36 @@ extension APIProtocol {
     /// - Remark: Generated from `#/paths//api/v1/annotations/{annotationId}/delete(deleteAnnotation)`.
     internal func deleteAnnotation(path: Operations.DeleteAnnotation.Input.Path) async throws -> Operations.DeleteAnnotation.Output {
         try await deleteAnnotation(Operations.DeleteAnnotation.Input(path: path))
+    }
+    /// List app authors
+    ///
+    /// Retrieve paginated authors for the app with optional filtering and sorting.
+    ///
+    /// - Remark: HTTP `GET /api/v1/app/authors`.
+    /// - Remark: Generated from `#/paths//api/v1/app/authors/get(appGetAuthors)`.
+    internal func appGetAuthors(
+        query: Operations.AppGetAuthors.Input.Query = .init(),
+        headers: Operations.AppGetAuthors.Input.Headers = .init()
+    ) async throws -> Operations.AppGetAuthors.Output {
+        try await appGetAuthors(Operations.AppGetAuthors.Input(
+            query: query,
+            headers: headers
+        ))
+    }
+    /// Get app author details
+    ///
+    /// Retrieve detailed app-facing information for a single author.
+    ///
+    /// - Remark: HTTP `GET /api/v1/app/authors/{authorId}`.
+    /// - Remark: Generated from `#/paths//api/v1/app/authors/{authorId}/get(appGetAuthorDetail)`.
+    internal func appGetAuthorDetail(
+        path: Operations.AppGetAuthorDetail.Input.Path,
+        headers: Operations.AppGetAuthorDetail.Input.Headers = .init()
+    ) async throws -> Operations.AppGetAuthorDetail.Output {
+        try await appGetAuthorDetail(Operations.AppGetAuthorDetail.Input(
+            path: path,
+            headers: headers
+        ))
     }
     /// List app books
     ///
@@ -626,6 +684,36 @@ extension APIProtocol {
     /// - Remark: Generated from `#/paths//api/v1/healthcheck/get(getPing)`.
     internal func getPing(headers: Operations.GetPing.Input.Headers = .init()) async throws -> Operations.GetPing.Output {
         try await getPing(Operations.GetPing.Input(headers: headers))
+    }
+    /// Get PDF annotations for a book
+    ///
+    /// Retrieve serialized PDF annotations for a specific book.
+    ///
+    /// - Remark: HTTP `GET /api/v1/pdf-annotations/book/{bookId}`.
+    /// - Remark: Generated from `#/paths//api/v1/pdf-annotations/book/{bookId}/get(getAnnotations)`.
+    internal func getAnnotations(
+        path: Operations.GetAnnotations.Input.Path,
+        headers: Operations.GetAnnotations.Input.Headers = .init()
+    ) async throws -> Operations.GetAnnotations.Output {
+        try await getAnnotations(Operations.GetAnnotations.Input(
+            path: path,
+            headers: headers
+        ))
+    }
+    /// Save PDF annotations for a book
+    ///
+    /// Save or update serialized PDF annotations for a specific book.
+    ///
+    /// - Remark: HTTP `PUT /api/v1/pdf-annotations/book/{bookId}`.
+    /// - Remark: Generated from `#/paths//api/v1/pdf-annotations/book/{bookId}/put(saveAnnotations)`.
+    internal func saveAnnotations(
+        path: Operations.SaveAnnotations.Input.Path,
+        body: Operations.SaveAnnotations.Input.Body
+    ) async throws -> Operations.SaveAnnotations.Output {
+        try await saveAnnotations(Operations.SaveAnnotations.Input(
+            path: path,
+            body: body
+        ))
     }
     /// Get public app settings
     ///

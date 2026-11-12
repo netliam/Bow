@@ -54,6 +54,22 @@ import Testing
         #expect(await server.requests.allSatisfy { $0.authorization == nil })
     }
 
+    /// Grimmory v3.5.0: `/version` needs sign-in, but the healthcheck is public and has the version.
+    @Test func versionComesFromTheHealthcheckWhenVersionNeedsSignIn() async throws {
+        let server = FakeGrimmory { request in
+            switch request.path {
+            case "/api/v1/public-settings": (200, #"{"oidcEnabled":false,"remoteAuthEnabled":false}"#)
+            case "/api/v1/version": (401, #"{"status":401,"error":"Unauthorized"}"#)
+            case "/api/v1/healthcheck":
+                (200, #"{"data":{"status":"UP","message":"Application is running smoothly.","timestamp":"2026-11-12T16:53:43.367803709","version":"v3.5.0"},"message":"Pong","status":200,"timestamp":"2026-11-12T16:53:43.367815126"}"#)
+            default: (404, "{}")
+            }
+        }
+        let client = GrimmoryClient(serverURL: Fixtures.server, tokenStore: InMemoryTokenStore(), transport: server)
+
+        #expect(try await client.serverInfo().version == "v3.5.0")
+    }
+
     @Test func wrongPasswordIsUnauthorized() async throws {
         let server = FakeGrimmory { _ in (401, #"{"message":"Invalid credentials"}"#) }
         let store = InMemoryTokenStore()

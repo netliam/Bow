@@ -29,6 +29,7 @@ final class LibrarySync {
         // In the main context, where the reader edits them (see `AnnotationSyncer`).
         _ = await AnnotationSyncer(context: container.mainContext).pushPending(to: { destinations[$0] })
         _ = await ShelfSyncer(context: container.mainContext).pushPending(to: { destinations[$0] })
+        await PDFAnnotationSyncer(context: container.mainContext).pushAll(to: { destinations[$0] })
     }
 
     func syncAll(_ container: ModelContainer) async {

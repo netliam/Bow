@@ -116,6 +116,94 @@ extension Components {
                 case userId
             }
         }
+        /// - Remark: Generated from `#/components/schemas/AppAuthorDetail`.
+        internal struct AppAuthorDetail: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/AppAuthorDetail/asin`.
+            internal var asin: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/AppAuthorDetail/bookCount`.
+            internal var bookCount: Swift.Int32?
+            /// - Remark: Generated from `#/components/schemas/AppAuthorDetail/description`.
+            internal var description: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/AppAuthorDetail/hasPhoto`.
+            internal var hasPhoto: Swift.Bool?
+            /// - Remark: Generated from `#/components/schemas/AppAuthorDetail/id`.
+            internal var id: Swift.Int64?
+            /// - Remark: Generated from `#/components/schemas/AppAuthorDetail/name`.
+            internal var name: Swift.String?
+            /// Creates a new `AppAuthorDetail`.
+            ///
+            /// - Parameters:
+            ///   - asin:
+            ///   - bookCount:
+            ///   - description:
+            ///   - hasPhoto:
+            ///   - id:
+            ///   - name:
+            internal init(
+                asin: Swift.String? = nil,
+                bookCount: Swift.Int32? = nil,
+                description: Swift.String? = nil,
+                hasPhoto: Swift.Bool? = nil,
+                id: Swift.Int64? = nil,
+                name: Swift.String? = nil
+            ) {
+                self.asin = asin
+                self.bookCount = bookCount
+                self.description = description
+                self.hasPhoto = hasPhoto
+                self.id = id
+                self.name = name
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case asin
+                case bookCount
+                case description
+                case hasPhoto
+                case id
+                case name
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/AppAuthorSummary`.
+        internal struct AppAuthorSummary: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/AppAuthorSummary/asin`.
+            internal var asin: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/AppAuthorSummary/bookCount`.
+            internal var bookCount: Swift.Int32?
+            /// - Remark: Generated from `#/components/schemas/AppAuthorSummary/hasPhoto`.
+            internal var hasPhoto: Swift.Bool?
+            /// - Remark: Generated from `#/components/schemas/AppAuthorSummary/id`.
+            internal var id: Swift.Int64?
+            /// - Remark: Generated from `#/components/schemas/AppAuthorSummary/name`.
+            internal var name: Swift.String?
+            /// Creates a new `AppAuthorSummary`.
+            ///
+            /// - Parameters:
+            ///   - asin:
+            ///   - bookCount:
+            ///   - hasPhoto:
+            ///   - id:
+            ///   - name:
+            internal init(
+                asin: Swift.String? = nil,
+                bookCount: Swift.Int32? = nil,
+                hasPhoto: Swift.Bool? = nil,
+                id: Swift.Int64? = nil,
+                name: Swift.String? = nil
+            ) {
+                self.asin = asin
+                self.bookCount = bookCount
+                self.hasPhoto = hasPhoto
+                self.id = id
+                self.name = name
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case asin
+                case bookCount
+                case hasPhoto
+                case id
+                case name
+            }
+        }
         /// - Remark: Generated from `#/components/schemas/AppBookDetail`.
         internal struct AppBookDetail: Codable, Hashable, Sendable {
             /// - Remark: Generated from `#/components/schemas/AppBookDetail/addedOn`.
@@ -840,6 +928,59 @@ extension Components {
                 case id
                 case name
                 case publicShelf
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/AppPageResponseAppAuthorSummary`.
+        internal struct AppPageResponseAppAuthorSummary: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/AppPageResponseAppAuthorSummary/content`.
+            internal var content: [Components.Schemas.AppAuthorSummary]?
+            /// - Remark: Generated from `#/components/schemas/AppPageResponseAppAuthorSummary/hasNext`.
+            internal var hasNext: Swift.Bool?
+            /// - Remark: Generated from `#/components/schemas/AppPageResponseAppAuthorSummary/hasPrevious`.
+            internal var hasPrevious: Swift.Bool?
+            /// - Remark: Generated from `#/components/schemas/AppPageResponseAppAuthorSummary/page`.
+            internal var page: Swift.Int32?
+            /// - Remark: Generated from `#/components/schemas/AppPageResponseAppAuthorSummary/size`.
+            internal var size: Swift.Int32?
+            /// - Remark: Generated from `#/components/schemas/AppPageResponseAppAuthorSummary/totalElements`.
+            internal var totalElements: Swift.Int64?
+            /// - Remark: Generated from `#/components/schemas/AppPageResponseAppAuthorSummary/totalPages`.
+            internal var totalPages: Swift.Int32?
+            /// Creates a new `AppPageResponseAppAuthorSummary`.
+            ///
+            /// - Parameters:
+            ///   - content:
+            ///   - hasNext:
+            ///   - hasPrevious:
+            ///   - page:
+            ///   - size:
+            ///   - totalElements:
+            ///   - totalPages:
+            internal init(
+                content: [Components.Schemas.AppAuthorSummary]? = nil,
+                hasNext: Swift.Bool? = nil,
+                hasPrevious: Swift.Bool? = nil,
+                page: Swift.Int32? = nil,
+                size: Swift.Int32? = nil,
+                totalElements: Swift.Int64? = nil,
+                totalPages: Swift.Int32? = nil
+            ) {
+                self.content = content
+                self.hasNext = hasNext
+                self.hasPrevious = hasPrevious
+                self.page = page
+                self.size = size
+                self.totalElements = totalElements
+                self.totalPages = totalPages
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case content
+                case hasNext
+                case hasPrevious
+                case page
+                case size
+                case totalElements
+                case totalPages
             }
         }
         /// - Remark: Generated from `#/components/schemas/AppPageResponseAppBookSummary`.
@@ -1765,7 +1906,7 @@ extension Components {
             /// - Remark: Generated from `#/components/schemas/HealthcheckResponse/status`.
             internal var status: Swift.String?
             /// - Remark: Generated from `#/components/schemas/HealthcheckResponse/timestamp`.
-            internal var timestamp: Foundation.Date?
+            internal var timestamp: Swift.String?
             /// - Remark: Generated from `#/components/schemas/HealthcheckResponse/version`.
             internal var version: Swift.String?
             /// Creates a new `HealthcheckResponse`.
@@ -1778,7 +1919,7 @@ extension Components {
             internal init(
                 message: Swift.String? = nil,
                 status: Swift.String? = nil,
-                timestamp: Foundation.Date? = nil,
+                timestamp: Swift.String? = nil,
                 version: Swift.String? = nil
             ) {
                 self.message = message
@@ -2659,7 +2800,7 @@ extension Components {
             /// - Remark: Generated from `#/components/schemas/SuccessResponseHealthcheckResponse/status`.
             internal var status: Swift.Int32?
             /// - Remark: Generated from `#/components/schemas/SuccessResponseHealthcheckResponse/timestamp`.
-            internal var timestamp: Foundation.Date?
+            internal var timestamp: Swift.String?
             /// Creates a new `SuccessResponseHealthcheckResponse`.
             ///
             /// - Parameters:
@@ -2671,7 +2812,7 @@ extension Components {
                 data: Components.Schemas.HealthcheckResponse? = nil,
                 message: Swift.String? = nil,
                 status: Swift.Int32? = nil,
-                timestamp: Foundation.Date? = nil
+                timestamp: Swift.String? = nil
             ) {
                 self.data = data
                 self.message = message

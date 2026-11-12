@@ -11,6 +11,7 @@ import SwiftUI
 
     private let container: ModelContainer
     @State private var librarySync = LibrarySync()
+    @State private var authors = AuthorDirectory()
     @State private var downloads: DownloadCenter
     @State private var importer: LocalImporter
 
@@ -37,6 +38,7 @@ import SwiftUI
                 .environment(librarySync)
                 .environment(downloads)
                 .environment(importer)
+                .environment(authors)
                 .onOpenURL { url in importer.importFiles([url]) }
         }
         .modelContainer(container)
@@ -53,6 +55,7 @@ import SwiftUI
             ReaderWindow(bookID: bookID)
                 .environment(librarySync)
                 .environment(downloads)
+                .environment(authors)
         }
         .modelContainer(container)
     }

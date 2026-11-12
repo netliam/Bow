@@ -140,6 +140,7 @@ struct ReaderScreen: View {
 
     /// Opens a PDF at this device's page, or the server's when it's newer (asking first if this device has one).
     private func loadPDF(_ url: URL) async {
+        await syncPDFAnnotations()
         let local = book.progress?.spineIndex
         guard let remoteID = book.remoteID, let account = book.account,
               let client = GrimmoryAccounts.client(for: account)
@@ -172,6 +173,24 @@ struct ReaderScreen: View {
         } else {
             pdf = PDFOpening(url: url, page: local)
         }
+    }
+
+    /// Sends this device's PDF highlight changes, then brings in the web viewer's. Gives up after a few seconds.
+    private func syncPDFAnnotations() async {
+        guard book.remoteID != nil, let account = book.account, let client = GrimmoryAccounts.client(for: account)
+        else { return }
+        let syncer = PDFAnnotationSyncer(context: modelContext)
+        let bookID = book.id
+        let work = Task {
+            try? await syncer.push(bookID: bookID, to: client)
+            try await syncer.pull(bookID: bookID, from: client)
+        }
+        let timeout = Task {
+            try await Task.sleep(for: .seconds(4))
+            work.cancel()
+        }
+        _ = try? await work.value
+        timeout.cancel()
     }
 
     /// The position Grimmory has, if it's newer than this device's and somewhere else. Gives up after a few

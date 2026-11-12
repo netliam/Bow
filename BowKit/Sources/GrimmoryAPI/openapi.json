@@ -5429,7 +5429,6 @@
             "type": "string"
           },
           "timestamp": {
-            "format": "date-time",
             "type": "string"
           },
           "version": {
@@ -8618,7 +8617,6 @@
             "type": "integer"
           },
           "timestamp": {
-            "format": "date-time",
             "type": "string"
           }
         },
