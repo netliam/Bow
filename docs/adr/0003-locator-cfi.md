@@ -1,13 +1,14 @@
 # ADR-0003: Reading locations as EPUB CFI
 
-**Status:** Proposed
+**Status:** Accepted (Grimmory format confirmed from source 2026-11-11)
 **Date:** 2026-11-11
 **Deciders:** Liam
 
 ## Context
 DCEpubReaderKit describes a location as `spineIndex` + an opaque `coords` string. `coords` is built by
 `getCoordFromNode` in `EpubUtil.js` as the zero-padded child-index path from the root to the node, plus a character
-offset. Grimmory's web reader (verify) stores EPUB positions as **EPUB CFI** strings plus a percentage. For progress
+offset. Grimmory's web reader (foliate-js) stores EPUB progress as `{cfi, href, percentage}`, and every annotation and
+bookmark has a `cfi` (see `grimmory-api.md`). For progress
 and highlights to move between Bow and the web app, both must understand the same location.
 
 ## Decision
@@ -44,10 +45,11 @@ a well-scoped piece of JS rather than a redesign. B stays as a fallback, and C i
 ## Consequences
 - Easier: cross-client progress and highlights. Future KOReader/OPDS interop thinking is aligned.
 - Harder: the fork must keep CFI conversion correct as the DOM handling evolves (e.g. stripped scripts, highlight merges).
-- Revisit: whether Grimmory really uses CFI for its reader (verify before building). If it uses KOReader-style
-  xpointers for some flows, add a second converter.
+- Revisit: KOReader progress arrives as a percentage only (the server converts XPointers itself), so no second
+  converter is needed.
 
 ## Action Items
-1. [ ] Confirm the format of Grimmory's progress and annotation payloads.
-2. [ ] Implement `coordsToCFI` / `cfiToCoords` in `EpubUtil.js`, with round-trip tests on the fork's fixtures.
-3. [ ] Expose conversion through a public API on the reader (or emit CFI alongside coords in `handleCoords`).
+1. [x] Confirm the format of Grimmory's progress and annotation payloads.
+2. [x] Implement `coordsToCFI` / `cfiToCoords` (kit `0.1.0`, `DCCFIConverter`).
+3. [ ] Take the spine step from the real OPF, as foliate-js does (kit follow-up #12).
+4. [ ] Compare against CFIs produced by Grimmory's web reader (kit follow-up #13).
