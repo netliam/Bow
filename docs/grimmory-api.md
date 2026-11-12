@@ -249,6 +249,14 @@ What Bow does (`BowSync/AnnotationSync.swift`, checked against a real Grimmory v
 
 ## Shelves, metadata, and other web features
 
+**Uploads from Bow** (`GrimmoryAPI/GrimmoryUpload.swift`, checked against Grimmory v3.5.0):
+- **Library:** `POST /api/v1/files/upload?libraryId=…&pathId=…`, multipart field `file`. Answers `204`; the book
+  appears a moment later, filed into an author folder. Needs `canUpload` (or admin). Folders come from
+  `GET /api/v1/libraries` (`paths[].id`).
+- **Bookdrop:** `POST /api/v1/files/upload/bookdrop`, same field. Answers `200` with the file waiting for review;
+  Grimmory fetches metadata for it straight away. Needs `canAccessBookdrop` (or admin).
+- **Refusals** carry a `message` (wrong format, duplicate…), which Bow shows next to the file.
+
 **Shelves in Bow** (`BowSync/ShelfSync.swift`, checked against Grimmory v3.5.0):
 - **Lists:** `GET /api/v1/app/shelves` and `GET /api/v1/app/shelves/magic`. Regular and magic shelf IDs are
   separate sequences. Every user starts with a "Favorites" shelf.

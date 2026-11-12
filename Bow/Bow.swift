@@ -14,6 +14,7 @@ import SwiftUI
     @State private var authors = AuthorDirectory()
     @State private var downloads: DownloadCenter
     @State private var importer: LocalImporter
+    @State private var intake: BookIntake
 
     nonisolated static let refreshTaskID = "app.bow.refresh"
 
@@ -26,7 +27,9 @@ import SwiftUI
                                                             transfer: AppDelegate.transfer) { account in
                 GrimmoryAccounts.client(for: account)
             })
-            _importer = State(initialValue: LocalImporter(context: container.mainContext))
+            let importer = LocalImporter(context: container.mainContext)
+            _importer = State(initialValue: importer)
+            _intake = State(initialValue: BookIntake(context: container.mainContext, importer: importer))
         } catch {
             // A store that can't open (e.g. a failed migration) leaves the app with nothing to show.
             fatalError("Couldn't open Bow's library store: \(error)")
@@ -40,7 +43,8 @@ import SwiftUI
                 .environment(downloads)
                 .environment(importer)
                 .environment(authors)
-                .onOpenURL { url in importer.importFiles([url]) }
+                .environment(intake)
+                .onOpenURL { url in intake.receive([url]) }
         }
         .modelContainer(container)
         .onChange(of: scenePhase) { _, phase in

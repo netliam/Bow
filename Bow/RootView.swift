@@ -13,7 +13,7 @@ struct RootView: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(LibrarySync.self) private var librarySync
-    @Environment(LocalImporter.self) private var importer
+    @Environment(BookIntake.self) private var intake
 
     @State private var tab: Tab = .home
     @State private var actions = AppActions()
@@ -37,8 +37,12 @@ struct RootView: View {
             }
         }
         .tabViewStyle(.sidebarAdaptable)
-        .fileImporter(isPresented: $actions.isImporting, allowedContentTypes: [.epub], allowsMultipleSelection: true) { result in
-            if case .success(let urls) = result { importer.importFiles(urls) }
+        .fileImporter(isPresented: $actions.isImporting, allowedContentTypes: Self.bookTypes,
+                      allowsMultipleSelection: true) { result in
+            if case .success(let urls) = result { intake.receive(urls) }
+        }
+        .sheet(isPresented: .init(get: { !intake.staged.isEmpty }, set: { if !$0 { intake.clear() } })) {
+            AddBooksSheet()
         }
         .sheet(isPresented: $actions.isAddingServer) {
             AddServerView { _ in
@@ -52,6 +56,13 @@ struct RootView: View {
         .task { await librarySync.syncAll(modelContext.container) }
         // Outermost, so the sheets above get it too: a sheet's content reads the environment where it's attached.
         .environment(actions)
+    }
+}
+
+extension RootView {
+    /// What the file picker offers: EPUBs, plus PDFs and comics when there's a server to upload them to.
+    static var bookTypes: [UTType] {
+        [.epub, .pdf] + ["cbz", "cbr", "cb7"].compactMap { UTType(filenameExtension: $0) }
     }
 }
 
