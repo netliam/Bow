@@ -215,6 +215,9 @@ From `BookLoreUser.UserPermissions`, among others:
   request are `@Deprecated`.
 - **What `positionData` holds:** for EPUB it's the **CFI**. For PDF and comics it's the page number as a string.
 - **ADR-0003 confirmed:** progress interop with the web reader is CFI + percentage.
+- **PDF progress:** send the same `fileProgress`, with `positionData` set to the page number (from 1, as the web
+  viewer counts) and no `positionHref`. Grimmory reports it back as `pdfProgress {page, percentage}`. Checked
+  against v3.5.0.
 - **KOReader progress:** this is a separate field. Bow can show it ("KOReader on Kobo: 43%") but shouldn't write it.
 
 ## Annotations, notes, bookmarks

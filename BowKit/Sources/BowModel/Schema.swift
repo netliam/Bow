@@ -126,6 +126,7 @@ public enum BowSchemaV2: VersionedSchema {
         public var cfi: String?
         public var href: String?
         public var kitCoords: String?
+        /// EPUB: the chapter's spine index. PDF: the page index, from 0.
         public var spineIndex: Int?
         /// 0–1.
         public var fraction: Double

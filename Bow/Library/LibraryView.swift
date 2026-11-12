@@ -97,7 +97,7 @@ struct BookGrid: View {
     }
 
     @ViewBuilder private func downloadMenu(for book: Book) -> some View {
-        if let file = book.files.first(where: { $0.format == .epub }), book.account?.kind != .local {
+        if let file = book.readableFile, book.account?.kind != .local {
             switch file.downloadState {
             case .downloaded:
                 Button("Remove Download", systemImage: "trash") { downloads.removeDownload(file) }
@@ -147,7 +147,7 @@ private struct BookTile: View {
         .accessibilityHint(accessibilityHint)
     }
 
-    private var file: BookFile? { book.files.first { $0.format == .epub } }
+    private var file: BookFile? { book.readableFile }
 
     @ViewBuilder private var downloadBadge: some View {
         if let file, book.account?.kind != .local {

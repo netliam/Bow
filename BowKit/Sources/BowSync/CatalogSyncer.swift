@@ -100,7 +100,8 @@ public actor CatalogSyncer {
         // progress sync decides which side wins.
         if let percent = summary.readProgress {
             if let progress = book.progress {
-                if progress.cfi == nil { progress.fraction = percent / 100 }
+                // No CFI (EPUB) or page (PDF) yet: never read here.
+                if progress.cfi == nil, progress.spineIndex == nil { progress.fraction = percent / 100 }
             } else {
                 modelContext.insert(ReadingProgress(book: book, fraction: percent / 100, updatedAt: .distantPast))
             }
