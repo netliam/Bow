@@ -48,7 +48,19 @@ Dependency direction: `App → BowReaders/BowSync/BowLibrary → BowModel`, `Bow
 - `BowModel`: SwiftData schema v1, with no shelves yet. Shelves come in Phase 2 as a schema migration.
 - `GrimmoryAPI`: the generated client, plus the hand-written `GrimmoryClient`, which covers sign-in, the
   single-flight refresh, server info, the current user, and catalog paging and IDs.
-- `BowSync`, `BowLibrary` and `BowReaders` are created when they get their first code.
+- `BowSync`: `CatalogSyncer`, which pages the Grimmory catalog into SwiftData, skips unchanged books by summary
+  hash, marks books gone from the server instead of deleting them, and never lets server progress overwrite a
+  book read on this device. `GrimmoryAccounts` keeps **one `GrimmoryClient` per account**, because two clients
+  would race the rotating refresh token.
+- **App (Phase 1, first slice):**
+  - **Shell:** a split view with a sidebar of "All Books" and one entry per server ("Sign Out and Remove" in its
+    context menu).
+  - **Library:** a cover grid with progress bars and pull to refresh. Covers are cached on disk by
+    `coverUpdatedOn`, and concurrent requests for the same cover share one download.
+  - **Add Server:** reads the server's sign-in options and offers first-run setup, OIDC
+    (`ASWebAuthenticationSession`), password, or proxy sign-in (a `WKWebView` that shares the proxy's cookies),
+    followed by a forced password change when Grimmory requires one.
+- `BowLibrary` and `BowReaders` are created when they get their first code.
 
 The generated code lives in `GrimmoryAPI/Generated` and is committed. Regenerate it with
 `Scripts/generate-grimmory-api.sh`, which patches the vendored spec, then runs swift-openapi-generator

@@ -4,6 +4,7 @@ import SwiftUI
 
 @main struct Bow: App {
     private let container: ModelContainer
+    @State private var librarySync = LibrarySync()
 
     init() {
         do {
@@ -16,7 +17,8 @@ import SwiftUI
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
+                .environment(librarySync)
         }
         .modelContainer(container)
     }

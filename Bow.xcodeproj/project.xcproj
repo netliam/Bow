@@ -50,6 +50,10 @@
           "build-phase": { "build-phase": "frameworks" },
         }, {
           "package": "BowKit",
+          "product-name": "BowSync",
+          "build-phase": { "build-phase": "frameworks" },
+        }, {
+          "package": "BowKit",
           "product-name": "GrimmoryAPI",
           "build-phase": { "build-phase": "frameworks" },
         }, {

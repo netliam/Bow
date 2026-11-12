@@ -13,6 +13,7 @@ let package = Package(
     products: [
         .library(name: "BowModel", targets: ["BowModel"]),
         .library(name: "GrimmoryAPI", targets: ["GrimmoryAPI"]),
+        .library(name: "BowSync", targets: ["BowSync"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-openapi-runtime", from: "1.13.4"),
@@ -30,7 +31,9 @@ let package = Package(
             ],
             exclude: ["openapi.json", "openapi-generator-config.yaml"]
         ),
+        .target(name: "BowSync", dependencies: ["BowModel", "GrimmoryAPI"]),
         .testTarget(name: "BowModelTests", dependencies: ["BowModel"]),
+        .testTarget(name: "BowSyncTests", dependencies: ["BowSync", "BowModel", "GrimmoryAPI"]),
         .testTarget(
             name: "GrimmoryAPITests",
             dependencies: [
