@@ -23,6 +23,10 @@ struct RootView: View {
             List(selection: $selection) {
                 Label("All Books", systemImage: "books.vertical")
                     .tag(LibrarySelection.all)
+                Label("Series", systemImage: "square.stack")
+                    .tag(LibrarySelection.series)
+                Label("Authors", systemImage: "person.2")
+                    .tag(LibrarySelection.authors)
 
                 if let local = accounts.first(where: { $0.kind == .local }) {
                     Label(local.displayName, systemImage: "ipad.and.iphone")
@@ -56,11 +60,24 @@ struct RootView: View {
             }
         } detail: {
             NavigationStack {
-                LibraryView(accountID: selection?.accountID, shelfID: selection?.shelfID,
-                            isAddingServer: $isAddingServer, isImporting: $isImporting)
-                    .id(selection)
-                    .navigationTitle(title)
+                Group {
+                    switch selection {
+                    case .series:
+                        SeriesListView()
+                    case .authors:
+                        AuthorListView()
+                    default:
+                        LibraryView(accountID: selection?.accountID, shelfID: selection?.shelfID,
+                                    isAddingServer: $isAddingServer, isImporting: $isImporting)
+                            .navigationTitle(title)
+                    }
+                }
+                .navigationDestination(for: Book.self) { BookDetailView(book: $0) }
+                .navigationDestination(for: BookCollection.self) { CollectionView(collection: $0) }
             }
+            // A fresh stack for each sidebar choice: re-identifying only the root would keep pages pushed from the
+            // previous choice, and their destinations, around.
+            .id(selection)
         }
         .fileImporter(isPresented: $isImporting, allowedContentTypes: [.epub], allowsMultipleSelection: true) { result in
             if case .success(let urls) = result { importer.importFiles(urls) }
@@ -115,6 +132,8 @@ struct RootView: View {
 
 enum LibrarySelection: Hashable {
     case all
+    case series
+    case authors
     case account(UUID)
     case shelf(UUID)
 

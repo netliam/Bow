@@ -13,7 +13,6 @@ struct LibraryView: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(LibrarySync.self) private var librarySync
-    @Environment(DownloadCenter.self) private var downloads
     @Environment(LocalImporter.self) private var importer
     @Query private var books: [Book]
 
@@ -38,19 +37,9 @@ struct LibraryView: View {
             if books.isEmpty {
                 emptyState
             } else {
-                ScrollView {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 120, maximum: 180), spacing: 20)], spacing: 24) {
-                        ForEach(books) { book in
-                            NavigationLink(value: book) { BookTile(book: book) }
-                                .buttonStyle(.plain)
-                                .contextMenu { downloadMenu(for: book) }
-                        }
-                    }
-                    .padding()
-                }
+                ScrollView { BookGrid(books: books) }
             }
         }
-        .navigationDestination(for: Book.self) { BookDetailView(book: $0) }
         .refreshable { await librarySync.syncAll(modelContext.container) }
         .dropDestination(for: URL.self) { urls, _ in
             let books = urls.filter { $0.pathExtension.lowercased() == "epub" }
@@ -72,22 +61,6 @@ struct LibraryView: View {
         }
     }
 
-    @ViewBuilder private func downloadMenu(for book: Book) -> some View {
-        if let file = book.files.first(where: { $0.format == .epub }), book.account?.kind != .local {
-            switch file.downloadState {
-            case .downloaded:
-                Button("Remove Download", systemImage: "trash") { downloads.removeDownload(file) }
-            case .downloading:
-                Button("Cancel Download", systemImage: "xmark") { downloads.cancel(file) }
-            case .remote:
-                Button("Download", systemImage: "arrow.down.circle") { downloads.download(file) }
-            case .failed:
-                if let reason = downloads.failures[file.id] { Text(reason) }
-                Button("Try Again", systemImage: "arrow.clockwise") { downloads.download(file) }
-            }
-        }
-    }
-
     @ViewBuilder private var emptyState: some View {
         if librarySync.isSyncing {
             ProgressView("Loading your library…")
@@ -105,8 +78,45 @@ struct LibraryView: View {
     }
 }
 
+/// Books as a grid of covers, each opening its detail page, with download actions in the context menu.
+struct BookGrid: View {
+    let books: [Book]
+    /// Shows "Book 2" under each title, for a series.
+    var showsSeriesNumber = false
+    @Environment(DownloadCenter.self) private var downloads
+
+    var body: some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 120, maximum: 180), spacing: 20)], spacing: 24) {
+            ForEach(books) { book in
+                NavigationLink(value: book) { BookTile(book: book, showsSeriesNumber: showsSeriesNumber) }
+                    .buttonStyle(.plain)
+                    .contextMenu { downloadMenu(for: book) }
+            }
+        }
+        .padding()
+    }
+
+    @ViewBuilder private func downloadMenu(for book: Book) -> some View {
+        if let file = book.files.first(where: { $0.format == .epub }), book.account?.kind != .local {
+            switch file.downloadState {
+            case .downloaded:
+                Button("Remove Download", systemImage: "trash") { downloads.removeDownload(file) }
+            case .downloading:
+                Button("Cancel Download", systemImage: "xmark") { downloads.cancel(file) }
+            case .remote:
+                Button("Download", systemImage: "arrow.down.circle") { downloads.download(file) }
+            case .failed:
+                if let reason = downloads.failures[file.id] { Text(reason) }
+                Button("Try Again", systemImage: "arrow.clockwise") { downloads.download(file) }
+            }
+        }
+    }
+
+}
+
 private struct BookTile: View {
     let book: Book
+    var showsSeriesNumber = false
     @Environment(DownloadCenter.self) private var downloads
 
     var body: some View {
@@ -116,6 +126,11 @@ private struct BookTile: View {
             if let fraction = book.progress?.fraction, fraction > 0 {
                 ProgressView(value: min(fraction, 1))
                     .tint(.secondary)
+            }
+            if showsSeriesNumber, let number = book.seriesNumber {
+                Text("Book \(number.formatted())")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
             }
             Text(book.title)
                 .font(.subheadline.weight(.medium))
