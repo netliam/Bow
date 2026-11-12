@@ -21,10 +21,11 @@ struct AddServerView: View {
     @State private var password = ""
     @State private var name = ""
     @State private var email = ""
-    @State private var isWorking = false
+    @State private var working: Action?
     @State private var errorMessage: String?
     @State private var isShowingProxySignIn = false
     @State private var pendingPasswordChange: PendingAccount?
+    @FocusState private var focus: Field?
 
     /// The server being signed in to. The account id is picked now because tokens are stored under it.
     struct ConnectedServer {
@@ -40,33 +41,48 @@ struct AddServerView: View {
         let currentPassword: String
     }
 
+    /// What's running, so only that button shows a spinner.
+    enum Action { case connect, singleSignOn, password, setup }
+    enum Field: Hashable { case address, name, username, email, password }
+
     var body: some View {
         NavigationStack {
-            Form {
-                if let server {
-                    signInSections(server)
-                } else {
-                    addressSection
-                }
-                if let errorMessage {
-                    Section {
-                        Label(errorMessage, systemImage: "exclamationmark.triangle")
-                            .foregroundStyle(.red)
+            ScrollView {
+                VStack(spacing: 28) {
+                    if let server {
+                        VStack(spacing: 28) {
+                            serverCard(server)
+                            if server.info.needsSetup {
+                                setupForm(server)
+                            } else {
+                                signInOptions(server)
+                            }
+                        }
+                        .transition(.push(from: .trailing))
+                    } else {
+                        VStack(spacing: 28) {
+                            addressStep
+                            errorBanner
+                        }
+                        .transition(.push(from: .leading))
                     }
                 }
+                .padding(24)
+                .frame(maxWidth: 440)
+                .frame(maxWidth: .infinity)
+                .animation(.smooth, value: server?.url)
+                .animation(.smooth, value: errorMessage)
             }
-            .formStyle(.grouped)
-            .disabled(isWorking)
-            .navigationTitle(server == nil ? "Add Server" : (server?.url.host() ?? "Sign In"))
+            .scrollBounceBehavior(.basedOnSize)
+            .background(Color(.systemGroupedBackground))
+            .disabled(working != nil)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
                         if let server { GrimmoryAccounts.forget(accountID: server.accountID) }
                         dismiss()
                     }
-                }
-                if isWorking {
-                    ToolbarItem(placement: .confirmationAction) { ProgressView() }
                 }
             }
         }
@@ -85,85 +101,199 @@ struct AddServerView: View {
 
     // MARK: Steps
 
-    private var addressSection: some View {
-        Section {
-            TextField("books.example.com", text: $address)
-                .textContentType(.URL)
-                .keyboardType(.URL)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .onSubmit { Task { await connect() } }
-            Button("Continue") { Task { await connect() } }
-                .disabled(address.trimmingCharacters(in: .whitespaces).isEmpty)
-        } header: {
-            Text("Server Address")
-        } footer: {
-            Text("The address you use for Grimmory in a browser. HTTPS is assumed unless you type http://.")
+    /// Shown next to whatever failed: under Continue on the address step, under the heading when signing in.
+    @ViewBuilder private var errorBanner: some View {
+        if let errorMessage {
+            ErrorBanner(message: errorMessage)
+                .transition(.opacity.combined(with: .scale(scale: 0.96)))
         }
     }
 
-    @ViewBuilder private func signInSections(_ server: ConnectedServer) -> some View {
-        let info = server.info
-        if info.needsSetup {
-            Section {
-                TextField("Name", text: $name).textContentType(.name)
-                TextField("Username", text: $username)
-                    .textContentType(.username)
-                    .textInputAutocapitalization(.never)
-                TextField("Email", text: $email)
-                    .textContentType(.emailAddress)
-                    .keyboardType(.emailAddress)
-                    .textInputAutocapitalization(.never)
-                SecureField("Password", text: $password).textContentType(.newPassword)
-                Button("Create Admin Account") { Task { await createAdmin(server) } }
-                    .disabled([name, username, email, password].contains { $0.isEmpty })
-            } header: {
-                Text("Set Up This Server")
-            } footer: {
-                Text("This Grimmory server has no accounts yet. The first one is the administrator.")
+    private var addressStep: some View {
+        VStack(spacing: 28) {
+            Header(symbol: "books.vertical.fill", title: "Connect to Grimmory",
+                   message: "Sign in to your Grimmory server to read your library on this device, and keep your place in sync.")
+
+            VStack(alignment: .leading, spacing: 8) {
+                InputField(symbol: "server.rack") {
+                    TextField("books.example.com", text: $address)
+                        .textContentType(.URL)
+                        .keyboardType(.URL)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .submitLabel(.continue)
+                        .focused($focus, equals: .address)
+                        .onSubmit { Task { await connect() } }
+                }
+                Text("The address you use for Grimmory in a browser. HTTPS is assumed unless you type http://.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 4)
             }
-        } else {
+
+            PrimaryButton("Continue", isWorking: working == .connect) { Task { await connect() } }
+                .disabled(address.trimmingCharacters(in: .whitespaces).isEmpty)
+        }
+        .onAppear { focus = .address }
+    }
+
+    private func serverCard(_ server: ConnectedServer) -> some View {
+        HStack(spacing: 14) {
+            Image(systemName: "server.rack")
+                .font(.title3)
+                .foregroundStyle(.tint)
+                .frame(width: 44, height: 44)
+                .background(.tint.opacity(0.12), in: .rect(cornerRadius: 10))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(server.url.host() ?? server.url.absoluteString)
+                    .font(.headline)
+                    .lineLimit(1)
+                Text(server.info.version.map { "Grimmory \($0)" } ?? "Grimmory")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 8)
+            Button("Change") {
+                GrimmoryAccounts.forget(accountID: server.accountID)
+                self.server = nil
+                errorMessage = nil
+            }
+            .font(.subheadline.weight(.medium))
+        }
+        .padding(14)
+        .background(.background, in: .rect(cornerRadius: 14))
+    }
+
+    @ViewBuilder private func signInOptions(_ server: ConnectedServer) -> some View {
+        let info = server.info
+        VStack(spacing: 20) {
+            Text("Sign In")
+                .font(.title2.bold())
+                .frame(maxWidth: .infinity, alignment: .leading)
+            errorBanner
+
             if let oidc = info.oidc {
-                Section {
-                    Button("Sign in with \(oidc.name ?? "Single Sign-On")") { Task { await signInWithOIDC(server, oidc) } }
+                PrimaryButton("Continue with \(oidc.name ?? "Single Sign-On")", symbol: "person.badge.key.fill",
+                              isWorking: working == .singleSignOn) {
+                    Task { await signInWithOIDC(server, oidc) }
                 }
             }
+
             if info.passwordLoginAllowed {
-                Section(info.oidc == nil ? "Sign In" : "Or use a password") {
+                if info.oidc != nil { OrDivider() }
+                VStack(spacing: 12) {
+                    InputGroup {
+                        InputField(symbol: "person") {
+                            TextField("Username", text: $username)
+                                .textContentType(.username)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                                .submitLabel(.next)
+                                .focused($focus, equals: .username)
+                                .onSubmit { focus = .password }
+                        }
+                        InputField(symbol: "lock") {
+                            SecureField("Password", text: $password)
+                                .textContentType(.password)
+                                .submitLabel(.go)
+                                .focused($focus, equals: .password)
+                                .onSubmit { Task { await signInWithPassword(server) } }
+                        }
+                    }
+                    let canSignIn = !username.isEmpty && !password.isEmpty
+                    if info.oidc == nil {
+                        PrimaryButton("Sign In", isWorking: working == .password) {
+                            Task { await signInWithPassword(server) }
+                        }
+                        .disabled(!canSignIn)
+                    } else {
+                        SecondaryButton("Sign In with Password", isWorking: working == .password) {
+                            Task { await signInWithPassword(server) }
+                        }
+                        .disabled(!canSignIn)
+                    }
+                }
+            }
+
+            if info.remoteAuthEnabled {
+                VStack(spacing: 8) {
+                    SecondaryButton("Use \(server.url.host() ?? "the Server")'s Sign-In Page", symbol: "globe") {
+                        isShowingProxySignIn = true
+                    }
+                    Text("For servers behind a sign-in proxy such as Authelia or Authentik.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+            }
+        }
+        .onAppear { if info.oidc == nil, info.passwordLoginAllowed { focus = .username } }
+    }
+
+    private func setupForm(_ server: ConnectedServer) -> some View {
+        VStack(spacing: 20) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Set Up This Server")
+                    .font(.title2.bold())
+                Text("This Grimmory server has no accounts yet. The first one you create is the administrator.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            errorBanner
+
+            InputGroup {
+                InputField(symbol: "person.text.rectangle") {
+                    TextField("Name", text: $name)
+                        .textContentType(.name)
+                        .submitLabel(.next)
+                        .focused($focus, equals: .name)
+                        .onSubmit { focus = .username }
+                }
+                InputField(symbol: "person") {
                     TextField("Username", text: $username)
                         .textContentType(.username)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
+                        .submitLabel(.next)
+                        .focused($focus, equals: .username)
+                        .onSubmit { focus = .email }
+                }
+                InputField(symbol: "envelope") {
+                    TextField("Email", text: $email)
+                        .textContentType(.emailAddress)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .submitLabel(.next)
+                        .focused($focus, equals: .email)
+                        .onSubmit { focus = .password }
+                }
+                InputField(symbol: "lock") {
                     SecureField("Password", text: $password)
-                        .textContentType(.password)
-                        .onSubmit { Task { await signInWithPassword(server) } }
-                    Button("Sign In") { Task { await signInWithPassword(server) } }
-                        .disabled(username.isEmpty || password.isEmpty)
+                        .textContentType(.newPassword)
+                        .submitLabel(.done)
+                        .focused($focus, equals: .password)
                 }
             }
-            if info.remoteAuthEnabled {
-                Section {
-                    Button("Sign in through \(server.url.host() ?? "the server")'s login page") {
-                        isShowingProxySignIn = true
-                    }
-                } footer: {
-                    Text("For servers behind a sign-in proxy such as Authelia or Authentik.")
-                }
+
+            PrimaryButton("Create Admin Account", isWorking: working == .setup) {
+                Task { await createAdmin(server) }
             }
+            .disabled([name, username, email, password].contains { $0.isEmpty })
         }
-        if let version = info.version {
-            Section { LabeledContent("Grimmory", value: version) }
-        }
+        .onAppear { focus = .name }
     }
 
     // MARK: Actions
 
     private func connect() async {
+        guard !address.trimmingCharacters(in: .whitespaces).isEmpty else { return }
         guard let url = GrimmoryAccounts.normalizedServerURL(address) else {
             errorMessage = "That doesn't look like a server address."
             return
         }
-        await run {
+        await run(.connect) {
             let accountID = UUID()
             let info = try await GrimmoryAccounts.client(serverURL: url, accountID: accountID).serverInfo()
             GrimmoryAccounts.forget(accountID: accountID)
@@ -172,14 +302,15 @@ struct AddServerView: View {
     }
 
     private func signInWithPassword(_ server: ConnectedServer) async {
-        await run {
+        guard !username.isEmpty, !password.isEmpty else { return }
+        await run(.password) {
             let user = try await server.client.signIn(username: username, password: password)
             finish(server, user: user, password: password)
         }
     }
 
     private func createAdmin(_ server: ConnectedServer) async {
-        await run {
+        await run(.setup) {
             let user = try await server.client.createFirstAdmin(username: username, name: name, email: email,
                                                                 password: password)
             finish(server, user: user, password: password)
@@ -187,7 +318,7 @@ struct AddServerView: View {
     }
 
     private func signInWithOIDC(_ server: ConnectedServer, _ provider: GrimmoryServerInfo.OIDCProvider) async {
-        await run {
+        await run(.singleSignOn) {
             let request = try await server.client.beginOIDCSignIn(provider: provider)
             let callback: URL
             do {
@@ -226,10 +357,10 @@ struct AddServerView: View {
         dismiss()
     }
 
-    private func run(_ work: () async throws -> Void) async {
-        isWorking = true
+    private func run(_ action: Action, _ work: () async throws -> Void) async {
+        working = action
         errorMessage = nil
-        defer { isWorking = false }
+        defer { working = nil }
         do {
             try await work()
         } catch {
