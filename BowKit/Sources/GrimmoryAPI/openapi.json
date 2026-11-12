@@ -8172,6 +8172,21 @@
         },
         "type": "object"
       },
+      "SetupStatusResponse": {
+        "properties": {
+          "data": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "status": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
       "Shelf": {
         "properties": {
           "bookCount": {
@@ -21241,7 +21256,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/SetupStatusResponse"
                 }
               }
             },

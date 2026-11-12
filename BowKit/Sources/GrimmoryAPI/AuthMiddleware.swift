@@ -9,6 +9,7 @@ struct AuthMiddleware: ClientMiddleware {
     static let publicOperations: Set<String> = [
         "getPing", "getVersionInfo", "getPublicSettings",
         "loginUser", "refreshToken", "oidcGenerateState", "oidcHandleMobileCallback",
+        "loginRemote", "getSetupStatus", "setupFirstUser",
     ]
 
     let session: GrimmorySession
@@ -21,13 +22,13 @@ struct AuthMiddleware: ClientMiddleware {
         next: @Sendable (HTTPRequest, HTTPBody?, URL) async throws -> (HTTPResponse, HTTPBody?)
     ) async throws -> (HTTPResponse, HTTPBody?) {
         guard !Self.publicOperations.contains(operationID) else {
-            return try await next(request, body, baseURL)
+            return try Self.rejectingWebPages(try await next(request, body, baseURL))
         }
 
         let token = try await session.validAccessToken()
         var request = request
         request.headerFields[.authorization] = "Bearer \(token)"
-        let (response, responseBody) = try await next(request, body, baseURL)
+        let (response, responseBody) = try Self.rejectingWebPages(try await next(request, body, baseURL))
 
         // A request body that can only be read once can't be sent again.
         guard response.status == .unauthorized, body?.iterationBehavior != .single else {
@@ -36,7 +37,16 @@ struct AuthMiddleware: ClientMiddleware {
 
         let fresh = try await session.refresh(replacing: token)
         request.headerFields[.authorization] = "Bearer \(fresh)"
-        return try await next(request, body, baseURL)
+        return try Self.rejectingWebPages(try await next(request, body, baseURL))
+    }
+
+    /// Grimmory's API never answers with HTML. A web page means something in front of it answered instead,
+    /// typically an auth proxy's sign-in page (URLSession follows the proxy's redirect to it).
+    static func rejectingWebPages(_ result: (HTTPResponse, HTTPBody?)) throws -> (HTTPResponse, HTTPBody?) {
+        if result.0.headerFields[.contentType]?.lowercased().hasPrefix("text/html") == true {
+            throw GrimmoryError.webPageInsteadOfAPI
+        }
+        return result
     }
 }
 

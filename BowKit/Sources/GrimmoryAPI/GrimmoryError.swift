@@ -10,8 +10,13 @@ public enum GrimmoryError: Error, Equatable, Sendable {
     case notFound
     /// Any other unexpected status code.
     case http(status: Int)
-    /// The server answered, but not with what Grimmory sends (wrong URL, a proxy page, an old version).
+    /// The server answered, but not with what Grimmory sends (wrong URL, an old version).
     case unexpectedResponse(String)
+    /// The server answered an API call with a web page. Usually a reverse proxy (Authelia, Authentik, …) asking
+    /// the user to sign in to it first; otherwise the server URL points at something other than Grimmory.
+    case webPageInsteadOfAPI
+    /// OIDC sign-in failed; the message is safe to show.
+    case oidcFailed(String)
 
     init(status: Int) {
         switch status {

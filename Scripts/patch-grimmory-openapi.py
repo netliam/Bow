@@ -10,6 +10,7 @@ Fixes the Spring/springdoc quirks listed in docs/grimmory-api.md:
      which is how Spring binds them.
   3. The `progressValid` property (leaked from an `@AssertTrue` getter) is dropped from `UpdateProgressRequest`.
   4. The CI machine's `servers` entry is removed; the client passes the user's server URL at runtime.
+  5. Untyped `ResponseEntity<?>` responses Bow reads get their real shape (`SuccessResponse<T>`).
 
 Which operations get generated is decided by `openapi-generator-config.yaml`, not here.
 """
@@ -64,6 +65,18 @@ def main():
             flatten_object_query_params(spec, operation)
             for response in operation.get("responses", {}).values():
                 fix_wildcard_content(response.get("content", {}))
+
+    # SetupController returns `SuccessResponse<Boolean>` (`data` = setup already completed) as `ResponseEntity<?>`.
+    spec["components"]["schemas"]["SetupStatusResponse"] = {
+        "type": "object",
+        "properties": {
+            "status": {"type": "integer", "format": "int32"},
+            "message": {"type": "string"},
+            "data": {"type": "boolean"},
+        },
+    }
+    status = spec["paths"]["/api/v1/setup/status"]["get"]["responses"]["200"]["content"]["application/json"]
+    status["schema"] = {"$ref": "#/components/schemas/SetupStatusResponse"}
 
     progress = spec["components"]["schemas"].get("UpdateProgressRequest", {})
     progress.get("properties", {}).pop("progressValid", None)

@@ -1101,6 +1101,31 @@ extension Components {
                 case stripMaxWidthPercent
             }
         }
+        /// Change password request
+        ///
+        /// - Remark: Generated from `#/components/schemas/ChangePasswordRequest`.
+        internal struct ChangePasswordRequest: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/ChangePasswordRequest/currentPassword`.
+            internal var currentPassword: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/ChangePasswordRequest/newPassword`.
+            internal var newPassword: Swift.String?
+            /// Creates a new `ChangePasswordRequest`.
+            ///
+            /// - Parameters:
+            ///   - currentPassword:
+            ///   - newPassword:
+            internal init(
+                currentPassword: Swift.String? = nil,
+                newPassword: Swift.String? = nil
+            ) {
+                self.currentPassword = currentPassword
+                self.newPassword = newPassword
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case currentPassword
+                case newPassword
+            }
+        }
         /// - Remark: Generated from `#/components/schemas/ClaimMapping`.
         internal struct ClaimMapping: Codable, Hashable, Sendable {
             /// - Remark: Generated from `#/components/schemas/ClaimMapping/email`.
@@ -1443,6 +1468,43 @@ extension Components {
                 case status
                 case timestamp
                 case version
+            }
+        }
+        /// Initial user request
+        ///
+        /// - Remark: Generated from `#/components/schemas/InitialUserRequest`.
+        internal struct InitialUserRequest: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/InitialUserRequest/email`.
+            internal var email: Swift.String
+            /// - Remark: Generated from `#/components/schemas/InitialUserRequest/name`.
+            internal var name: Swift.String
+            /// - Remark: Generated from `#/components/schemas/InitialUserRequest/password`.
+            internal var password: Swift.String
+            /// - Remark: Generated from `#/components/schemas/InitialUserRequest/username`.
+            internal var username: Swift.String
+            /// Creates a new `InitialUserRequest`.
+            ///
+            /// - Parameters:
+            ///   - email:
+            ///   - name:
+            ///   - password:
+            ///   - username:
+            internal init(
+                email: Swift.String,
+                name: Swift.String,
+                password: Swift.String,
+                username: Swift.String
+            ) {
+                self.email = email
+                self.name = name
+                self.password = password
+                self.username = username
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case email
+                case name
+                case password
+                case username
             }
         }
         /// KoReader progress object
@@ -2129,6 +2191,35 @@ extension Components {
                 case sortField
                 case title
                 case _type = "type"
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/SetupStatusResponse`.
+        internal struct SetupStatusResponse: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/SetupStatusResponse/data`.
+            internal var data: Swift.Bool?
+            /// - Remark: Generated from `#/components/schemas/SetupStatusResponse/message`.
+            internal var message: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/SetupStatusResponse/status`.
+            internal var status: Swift.Int32?
+            /// Creates a new `SetupStatusResponse`.
+            ///
+            /// - Parameters:
+            ///   - data:
+            ///   - message:
+            ///   - status:
+            internal init(
+                data: Swift.Bool? = nil,
+                message: Swift.String? = nil,
+                status: Swift.Int32? = nil
+            ) {
+                self.data = data
+                self.message = message
+                self.status = status
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case data
+                case message
+                case status
             }
         }
         /// - Remark: Generated from `#/components/schemas/SidebarSortOption`.
