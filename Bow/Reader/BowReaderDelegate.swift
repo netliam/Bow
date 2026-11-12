@@ -26,8 +26,12 @@ final class BowReaderDelegate: DCReaderCoordsProtocol {
     /// Converting to a CFI loads the chapter off screen, so wait for the reader to settle on a page first.
     static let cfiDelay: Duration = .seconds(2)
 
-    init(context: ModelContext, bookID: UUID, epub: DCEpubBook, onChangeQueued: @escaping () -> Void) {
+    private let sessions: ReadingSessionRecorder
+
+    init(context: ModelContext, bookID: UUID, epub: DCEpubBook, sessions: ReadingSessionRecorder,
+         onChangeQueued: @escaping () -> Void) {
         self.context = context
+        self.sessions = sessions
         self.bookID = bookID
         self.epub = epub
         self.converter = DCCFIConverter(book: epub)
@@ -76,6 +80,7 @@ final class BowReaderDelegate: DCReaderCoordsProtocol {
     /// The whole-book fraction, as the reader's progress bar shows it ("11 of 39"). Arrives right after
     /// `handleCoords`, so it's in place before the delayed CFI push reads it.
     func handleProgress(book _: DCEpubBook, progress readerProgress: DCReaderProgress) {
+        sessions.activity(progress: readerProgress.fraction * 100, location: book?.progress?.cfi)
         guard let progress = book?.progress else { return }
         // Until the kit has counted the book's pages, `fraction` is a chapter-based estimate, which can be well off
         // (12.8% counted, 19% estimated, for the same page). Reopening at the same place keeps the counted figure.

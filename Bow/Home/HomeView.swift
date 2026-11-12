@@ -20,6 +20,7 @@ struct HomeView: View {
                     if !continueReading.isEmpty {
                         ContinueSection(books: continueReading)
                     }
+                    ReadingSummaryCard()
                     shelfRow("Next in Series", subtitle: "Pick up where a series left off.", books: nextInSeries)
                     shelfRow("Recently Added", subtitle: "New in your library.", books: recentlyAdded,
                              seeAll: .all, large: true)

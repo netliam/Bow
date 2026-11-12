@@ -21,11 +21,15 @@ struct ReaderScreen: View {
     @State private var pdf: PDFOpening?
     @State private var pdfChoice: PDFChoice?
     @State private var failure: String?
+    /// Times this reading, for Grimmory's stats. Created when the book opens.
+    @State private var sessions: ReadingSessionRecorder?
+    @Environment(\.scenePhase) private var scenePhase
 
     /// A PDF to show, and the page to start on (from 0).
     struct PDFOpening {
         let url: URL
         let page: Int
+        let sessions: ReadingSessionRecorder
     }
 
     /// Both this device and the server have a page, and the server's is newer.
@@ -59,7 +63,7 @@ struct ReaderScreen: View {
             if let reader {
                 reader.view
             } else if let pdf {
-                PDFReaderView(book: book, url: pdf.url, startPage: pdf.page) { close() }
+                PDFReaderView(book: book, url: pdf.url, startPage: pdf.page, sessions: pdf.sessions) { close() }
             } else if let choice {
                 choiceView(serverPercentage: choice.server.percentage) {
                     start(choice.epub, at: choice.server)
@@ -68,9 +72,9 @@ struct ReaderScreen: View {
                 }
             } else if let pdfChoice {
                 choiceView(serverPercentage: pdfChoice.percentage) {
-                    pdf = PDFOpening(url: pdfChoice.url, page: pdfChoice.serverPage)
+                    pdf = PDFOpening(url: pdfChoice.url, page: pdfChoice.serverPage, sessions: pdfRecorder())
                 } stay: {
-                    pdf = PDFOpening(url: pdfChoice.url, page: book.progress?.spineIndex ?? 0)
+                    pdf = PDFOpening(url: pdfChoice.url, page: book.progress?.spineIndex ?? 0, sessions: pdfRecorder())
                 }
             } else if let failure {
                 ContentUnavailableView {
@@ -85,6 +89,10 @@ struct ReaderScreen: View {
             }
         }
         .task { await load() }
+        .onDisappear { endSession() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active { endSession() }  // The next page turn starts a new session.
+        }
     }
 
     private func choiceView(serverPercentage: Double, goToServer: @escaping () -> Void,
@@ -101,7 +109,22 @@ struct ReaderScreen: View {
         }
     }
 
+    /// One recorder per opening, kept so closing the reader can end its session.
+    private func pdfRecorder() -> ReadingSessionRecorder {
+        let recorder = sessions ?? ReadingSessionRecorder(book: book, bookType: .pdf, context: modelContext)
+        sessions = recorder
+        return recorder
+    }
+
+    /// Ends the reading session and sends it, so it shows in Grimmory's stats straight away.
+    private func endSession() {
+        sessions?.end()
+        let container = modelContext.container
+        Task { await librarySync.pushChanges(container) }
+    }
+
     private func close() {
+        endSession()
         if let onClose { onClose() } else { dismiss() }
     }
 
@@ -145,7 +168,7 @@ struct ReaderScreen: View {
         guard let remoteID = book.remoteID, let account = book.account,
               let client = GrimmoryAccounts.client(for: account)
         else {
-            pdf = PDFOpening(url: url, page: local ?? 0)
+            pdf = PDFOpening(url: url, page: local ?? 0, sessions: pdfRecorder())
             return
         }
         let fetched = await withTaskGroup(of: GrimmoryPDFProgress??.self) { group in
@@ -159,11 +182,11 @@ struct ReaderScreen: View {
             return first ?? nil
         }
         guard let server = fetched, server.page >= 1, server.page - 1 != local else {
-            pdf = PDFOpening(url: url, page: local ?? 0)
+            pdf = PDFOpening(url: url, page: local ?? 0, sessions: pdfRecorder())
             return
         }
         guard let local else {
-            pdf = PDFOpening(url: url, page: server.page - 1)  // Never opened here.
+            pdf = PDFOpening(url: url, page: server.page - 1, sessions: pdfRecorder())  // Never opened here.
             return
         }
         // As for EPUBs: this device's own pushes move `lastReadTime` too, so require a clear margin.
@@ -171,7 +194,7 @@ struct ReaderScreen: View {
         if let serverTime = server.lastReadTime, serverTime > localTime.addingTimeInterval(60) {
             pdfChoice = PDFChoice(url: url, serverPage: server.page - 1, percentage: server.percentage)
         } else {
-            pdf = PDFOpening(url: url, page: local)
+            pdf = PDFOpening(url: url, page: local, sessions: pdfRecorder())
         }
     }
 
@@ -250,7 +273,9 @@ struct ReaderScreen: View {
     private func start(_ epub: DCEpubBook, at server: ServerPosition?) {
         choice = nil
         let container = modelContext.container
-        let delegate = BowReaderDelegate(context: modelContext, bookID: book.id, epub: epub) {
+        let recorder = ReadingSessionRecorder(book: book, bookType: .epub, context: modelContext)
+        sessions = recorder
+        let delegate = BowReaderDelegate(context: modelContext, bookID: book.id, epub: epub, sessions: recorder) {
             Task { await librarySync.pushChanges(container) }
         }
         var configuration = DCReaderConfiguration()
