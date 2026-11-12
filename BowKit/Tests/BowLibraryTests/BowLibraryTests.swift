@@ -2,6 +2,7 @@ import Foundation
 import SwiftData
 import Testing
 import ZIPFoundation
+import GrimmoryAPI
 @testable import BowLibrary
 @testable import BowModel
 
@@ -60,13 +61,25 @@ private func makeEPUB() throws -> URL {
     }
 }
 
-private struct FakeFileSource: BookFileSource {
-    var result: @Sendable () throws -> URL
+struct FakeFileSource: BookFileSource {
+    var fail: (any Error)? = nil
 
-    func downloadFile(bookID: Int64, fileID: Int64, progress: @escaping @Sendable (Double) -> Void) async throws -> URL {
-        progress(0.5)
-        return try result()
+    func downloadRequest(bookID: Int64, fileID: Int64) async throws -> URLRequest {
+        if let fail { throw fail }
+        return URLRequest(url: URL(string: "https://books.example.com/api/v1/books/\(bookID)/files/\(fileID)/download")!)
     }
+}
+
+/// Records started transfers; tests deliver their events by hand.
+final class FakeTransfer: FileTransfer, @unchecked Sendable {
+    var started: [UUID: URLRequest] = [:]
+    var cancelled: [UUID] = []
+    var active: Set<UUID> = []
+
+    func setHandler(_ handler: @escaping @Sendable (TransferEvent) -> Void) {}
+    func start(_ request: URLRequest, id: UUID) { started[id] = request }
+    func cancel(id: UUID) { cancelled.append(id) }
+    func activeIDs() async -> Set<UUID> { active }
 }
 
 @MainActor
@@ -74,6 +87,7 @@ private struct FakeFileSource: BookFileSource {
     let context: ModelContext
     let file: BookFile
     let storage = BookStorage(root: temporaryDirectory().appending(path: "Books"))
+    let transfer = FakeTransfer()
 
     init() throws {
         context = ModelContext(try BowStore.makeContainer(inMemory: true))
@@ -86,35 +100,73 @@ private struct FakeFileSource: BookFileSource {
         try context.save()
     }
 
-    @Test func downloadsIntoStorage() async throws {
-        let epub = try makeEPUB()
-        let center = DownloadCenter(context: context, storage: storage) { _ in FakeFileSource { epub } }
+    private func center(_ source: FakeFileSource = FakeFileSource()) -> DownloadCenter {
+        DownloadCenter(context: context, storage: storage, transfer: transfer) { _ in source }
+    }
 
+    @Test func startsATransferAndStoresTheFinishedFile() async throws {
+        let center = center()
         await center.download(file)?.value
+        #expect(file.downloadState == .downloading)
+        #expect(transfer.started[file.id]?.url?.path() == "/api/v1/books/5/files/50/download")
+
+        center.handle(.progress(file.id, 0.5))
+        #expect(center.progress[file.id] == 0.5)
+
+        center.handle(.finished(file.id, file: try makeEPUB(), statusCode: 200, mimeType: "application/epub+zip"))
 
         #expect(file.downloadState == .downloaded)
         let path = try #require(file.localRelativePath)
         #expect(FileManager.default.fileExists(atPath: storage.url(forRelativePath: path).path(percentEncoded: false)))
         #expect((file.sizeBytes ?? 0) > 0)
         #expect(center.progress.isEmpty)
-        #expect(center.failures.isEmpty)
     }
 
     @Test func forbiddenDownloadExplainsWhy() async throws {
-        let center = DownloadCenter(context: context, storage: storage) { _ in
-            FakeFileSource { throw GrimmoryErrorStub.forbidden }
-        }
-
+        let center = center()
         await center.download(file)?.value
+
+        center.handle(.finished(file.id, file: try makeEPUB(), statusCode: 403, mimeType: "application/json"))
 
         #expect(file.downloadState == .failed)
         #expect(center.failures[file.id] == "Your Grimmory account isn't allowed to download books.")
     }
 
-    @Test func removingADownloadKeepsTheBook() async throws {
-        let epub = try makeEPUB()
-        let center = DownloadCenter(context: context, storage: storage) { _ in FakeFileSource { epub } }
+    @Test func proxyPageIsNotStoredAsABook() async throws {
+        let center = center()
         await center.download(file)?.value
+
+        center.handle(.finished(file.id, file: try makeEPUB(), statusCode: 200, mimeType: "text/html"))
+
+        #expect(file.downloadState == .failed)
+        #expect(file.localRelativePath == nil)
+    }
+
+    @Test func signingFailureNeverStartsATransfer() async throws {
+        let center = center(FakeFileSource(fail: GrimmoryError.signedOut))
+        await center.download(file)?.value
+
+        #expect(transfer.started.isEmpty)
+        #expect(file.downloadState == .failed)
+        #expect(center.failures[file.id] == "You've been signed out of this server.")
+    }
+
+    @Test func cancellingReturnsToNotDownloaded() async throws {
+        let center = center()
+        await center.download(file)?.value
+
+        center.cancel(file)
+        center.handle(.failed(file.id, CancellationError()))
+
+        #expect(transfer.cancelled == [file.id])
+        #expect(file.downloadState == .remote)
+        #expect(center.failures.isEmpty)
+    }
+
+    @Test func removingADownloadKeepsTheBook() async throws {
+        let center = center()
+        await center.download(file)?.value
+        center.handle(.finished(file.id, file: try makeEPUB(), statusCode: 200, mimeType: "application/epub+zip"))
 
         center.removeDownload(file)
 
@@ -123,17 +175,20 @@ private struct FakeFileSource: BookFileSource {
         #expect(try context.fetchCount(FetchDescriptor<Book>()) == 1)
     }
 
-    @Test func interruptedDownloadsResetOnLaunch() throws {
+    @Test func relaunchKeepsLiveTransfersAndResetsLostOnes() async throws {
+        let other = BookFile(book: file.book, format: .pdf, remoteFileID: 51)
+        context.insert(other)
         file.downloadState = .downloading
+        other.downloadState = .downloading
         try context.save()
+        transfer.active = [file.id]  // Still running in the background session.
 
-        _ = DownloadCenter(context: context, storage: storage) { _ in nil }
+        let center = center()
+        await Task.yield()
+        try await Task.sleep(for: .milliseconds(50))
 
-        #expect(file.downloadState == .remote)
+        #expect(file.downloadState == .downloading)
+        #expect(center.progress[file.id] == 0)
+        #expect(other.downloadState == .remote)
     }
-}
-
-import GrimmoryAPI
-private enum GrimmoryErrorStub {
-    static let forbidden = GrimmoryError.forbidden
 }

@@ -65,7 +65,7 @@ final class BowReaderDelegate: DCReaderCoordsProtocol {
             if let cfi = await converter.cfi(fromCoords: coords, spineIndex: spineIndex), !Task.isCancelled {
                 progress.cfi = cfi
             }
-            ProgressOutbox.enqueue(bookID: bookID, in: context)
+            BookOutbox.enqueue(.progress, bookID: bookID, in: context)
             try? context.save()
             onProgressQueued()
         }

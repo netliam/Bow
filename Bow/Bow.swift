@@ -1,3 +1,4 @@
+import BackgroundTasks
 import BowLibrary
 import BowModel
 import BowSync
@@ -5,17 +6,25 @@ import SwiftData
 import SwiftUI
 
 @main struct Bow: App {
+    @UIApplicationDelegateAdaptor private var appDelegate: AppDelegate
+    @Environment(\.scenePhase) private var scenePhase
+
     private let container: ModelContainer
     @State private var librarySync = LibrarySync()
     @State private var downloads: DownloadCenter
+    @State private var importer: LocalImporter
+
+    nonisolated static let refreshTaskID = "app.bow.refresh"
 
     init() {
         do {
             let container = try BowStore.makeContainer()
             self.container = container
-            _downloads = State(initialValue: DownloadCenter(context: container.mainContext) { account in
+            _downloads = State(initialValue: DownloadCenter(context: container.mainContext,
+                                                            transfer: AppDelegate.transfer) { account in
                 GrimmoryAccounts.client(for: account)
             })
+            _importer = State(initialValue: LocalImporter(context: container.mainContext))
         } catch {
             // A store that can't open (e.g. a failed migration) leaves the app with nothing to show.
             fatalError("Couldn't open Bow's library store: \(error)")
@@ -27,7 +36,31 @@ import SwiftUI
             RootView()
                 .environment(librarySync)
                 .environment(downloads)
+                .environment(importer)
+                .onOpenURL { url in importer.importFiles([url]) }
         }
         .modelContainer(container)
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background { Task { await Self.scheduleRefresh() } }
+        }
+        .backgroundTask(.appRefresh(Self.refreshTaskID)) { [container, librarySync] in
+            await Self.scheduleRefresh()
+            await librarySync.syncAll(container)
+        }
+
+        // On Mac, each book opens in a window of its own.
+        WindowGroup("Reader", id: ReaderWindow.id, for: UUID.self) { $bookID in
+            ReaderWindow(bookID: bookID)
+                .environment(librarySync)
+                .environment(downloads)
+        }
+        .modelContainer(container)
+    }
+
+    /// Asks for a background refresh in about an hour: push this device's changes, then refresh the catalog.
+    nonisolated static func scheduleRefresh() async {
+        let request = BGAppRefreshTaskRequest(identifier: refreshTaskID)
+        request.earliestBeginDate = Date(timeIntervalSinceNow: 60 * 60)
+        try? await BGTaskScheduler.shared.submitTaskRequest(request)
     }
 }

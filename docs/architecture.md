@@ -65,22 +65,35 @@ Dependency direction: `App → BowReaders/BowSync/BowLibrary → BowModel`, `Bow
     EPUBs with ZIPFoundation into `epub/` on first open.
   - `DownloadCenter` runs downloads with progress, failure reasons and remove/cancel.
   - `ReadingFraction` estimates progress by chapter size, the way foliate-js does.
-- **Reading progress sync (`BowSync`):**
-  - `ProgressOutbox` keeps one pending change per book.
-  - `ProgressPusher` sends `fileProgress` with the CFI, href and percent. Server refusals (4xx) are parked, and
-    network errors back off from 30 seconds up to 1 hour.
-  - Progress is pushed after each reading session settles and before every catalog pull.
-- **Reader (app):**
-  - Tapping a book downloads it if needed, then opens it in DCEpubReaderKit, resuming at the saved kit position.
-  - `BowReaderDelegate` stores positions in `ReadingProgress`, converted to CFI two seconds after the reader
-    settles, and highlights, notes and bookmarks in `Annotation`, mapped to Grimmory's colours and styles.
-  - Annotations stay local until Phase 2.
+- **Book outbox (`BowSync`):**
+  - `BookOutbox` keeps one pending change per book and kind: reading position, read status or rating.
+  - `OutboxPusher` sends them. Server refusals (4xx) are parked, and network errors back off from 30 seconds up
+    to 1 hour.
+  - Changes are pushed when they happen and before every catalog pull.
+  - Catalog sync leaves a field alone while a local edit to it is still unsent.
+- **Phase 1 (app), done:**
+  - **Library:** tapping a book opens its detail page:
+    - cover, title, authors, series
+    - the server's description and publisher details
+    - read/download button, progress
+    - read status (all 9 Grimmory statuses) and a 1–5 star rating
+  - **Downloads:** run in a background `URLSession` (`BackgroundURLSessionTransfer`), so they continue while
+    Bow is suspended and are reconciled on relaunch. Requests are signed just before they start.
+  - **Reader:** `BowReaderDelegate` stores positions as CFIs and annotations as `Annotation`, mapped to
+    Grimmory's colours.
+    - Before opening, Bow asks Grimmory for its position, giving up after 3 seconds. If the server's is more than
+      a minute newer and elsewhere, Bow asks "Continue where you left off?". If the book has never been opened on
+      this device, it goes straight there.
+    - On Mac, the reader opens in its own window (`ReaderWindow`, `openWindow`).
+  - **Local import:** from Files, "Open in Bow" or drag and drop, into an "On This Device" library. Each import
+    reads its title, authors and cover from the EPUB.
+  - **Background refresh:** a `BGAppRefreshTask` (`app.bow.refresh`, about hourly) pushes changes, then
+    refreshes the catalog.
 - **Not done yet:**
-  - Downloads run in the foreground only; they need a background `URLSession` before large libraries.
-  - There's no "continue from the server's position?" prompt when another device is ahead.
   - The percentage counts from the start of the current chapter (kit follow-up #15).
   - PDF and comics show a "not supported yet" message.
-  - The Mac reader opens full screen rather than in its own window.
+  - Annotations stay local until Phase 2.
+  - Background tasks need a real bundle ID and a signed build to run on a device.
 - `BowReaders` isn't needed yet: the EPUB adapter lives in the app, because the kit is iOS/Catalyst-only and would
   stop `swift test` running on the Mac host.
 
