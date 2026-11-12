@@ -285,7 +285,7 @@ What Bow does (`BowSync/AnnotationSync.swift`, checked against a real Grimmory v
 | Bookdrop inbox | `/api/v1/bookdrop/*` |
 | Send by email | `POST /api/v1/email/book/{bookId}` (quick), `POST /api/v1/email/book` |
 | Email recipients | `/api/v1/email/recipients` |
-| Reading sessions | `POST /api/v1/reading-sessions`. Bow should record these, as they feed the stats. |
+| Reading sessions | `POST /api/v1/reading-sessions` (202). Bow records them like the web reader: idle after 5 min, under 30 s dropped (`BowSync/ReadingSessions.swift`). |
 | Stats | `/api/v1/user-stats/reading/*` (heatmap, streak, speed, genres, timeline…), `/api/v1/user-stats/listening/*` |
 | Reviews | `/api/v1/reviews` |
 | Recommendations | `GET /api/v1/books/{id}/recommendations` |

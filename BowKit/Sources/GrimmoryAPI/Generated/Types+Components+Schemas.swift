@@ -1509,6 +1509,71 @@ extension Components {
                 case username
             }
         }
+        /// - Remark: Generated from `#/components/schemas/CompletionTimelineResponse`.
+        internal struct CompletionTimelineResponse: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/CompletionTimelineResponse/completionRate`.
+            internal var completionRate: Swift.Double?
+            /// - Remark: Generated from `#/components/schemas/CompletionTimelineResponse/finishedBooks`.
+            internal var finishedBooks: Swift.Int64?
+            /// - Remark: Generated from `#/components/schemas/CompletionTimelineResponse/month`.
+            internal var month: Swift.Int32?
+            /// - Remark: Generated from `#/components/schemas/CompletionTimelineResponse/statusBreakdown`.
+            internal struct StatusBreakdownPayload: Codable, Hashable, Sendable {
+                /// A container of undocumented properties.
+                internal var additionalProperties: [String: Swift.Int64]
+                /// Creates a new `StatusBreakdownPayload`.
+                ///
+                /// - Parameters:
+                ///   - additionalProperties: A container of undocumented properties.
+                internal init(additionalProperties: [String: Swift.Int64] = .init()) {
+                    self.additionalProperties = additionalProperties
+                }
+                internal init(from decoder: any Swift.Decoder) throws {
+                    additionalProperties = try decoder.decodeAdditionalProperties(knownKeys: [])
+                }
+                internal func encode(to encoder: any Swift.Encoder) throws {
+                    try encoder.encodeAdditionalProperties(additionalProperties)
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/CompletionTimelineResponse/statusBreakdown`.
+            internal var statusBreakdown: Components.Schemas.CompletionTimelineResponse.StatusBreakdownPayload?
+            /// - Remark: Generated from `#/components/schemas/CompletionTimelineResponse/totalBooks`.
+            internal var totalBooks: Swift.Int64?
+            /// - Remark: Generated from `#/components/schemas/CompletionTimelineResponse/year`.
+            internal var year: Swift.Int32?
+            /// Creates a new `CompletionTimelineResponse`.
+            ///
+            /// - Parameters:
+            ///   - completionRate:
+            ///   - finishedBooks:
+            ///   - month:
+            ///   - statusBreakdown:
+            ///   - totalBooks:
+            ///   - year:
+            internal init(
+                completionRate: Swift.Double? = nil,
+                finishedBooks: Swift.Int64? = nil,
+                month: Swift.Int32? = nil,
+                statusBreakdown: Components.Schemas.CompletionTimelineResponse.StatusBreakdownPayload? = nil,
+                totalBooks: Swift.Int64? = nil,
+                year: Swift.Int32? = nil
+            ) {
+                self.completionRate = completionRate
+                self.finishedBooks = finishedBooks
+                self.month = month
+                self.statusBreakdown = statusBreakdown
+                self.totalBooks = totalBooks
+                self.year = year
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case completionRate
+                case finishedBooks
+                case month
+                case statusBreakdown
+                case totalBooks
+                case year
+            }
+        }
         /// Annotation creation request
         ///
         /// - Remark: Generated from `#/components/schemas/CreateAnnotationRequest`.
@@ -1844,6 +1909,82 @@ extension Components {
                 case lineHeight
                 case spread
                 case theme
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/FavoriteReadingDaysResponse`.
+        internal struct FavoriteReadingDaysResponse: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/FavoriteReadingDaysResponse/dayName`.
+            internal var dayName: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/FavoriteReadingDaysResponse/dayOfWeek`.
+            internal var dayOfWeek: Swift.Int32?
+            /// - Remark: Generated from `#/components/schemas/FavoriteReadingDaysResponse/sessionCount`.
+            internal var sessionCount: Swift.Int64?
+            /// - Remark: Generated from `#/components/schemas/FavoriteReadingDaysResponse/totalDurationSeconds`.
+            internal var totalDurationSeconds: Swift.Int64?
+            /// Creates a new `FavoriteReadingDaysResponse`.
+            ///
+            /// - Parameters:
+            ///   - dayName:
+            ///   - dayOfWeek:
+            ///   - sessionCount:
+            ///   - totalDurationSeconds:
+            internal init(
+                dayName: Swift.String? = nil,
+                dayOfWeek: Swift.Int32? = nil,
+                sessionCount: Swift.Int64? = nil,
+                totalDurationSeconds: Swift.Int64? = nil
+            ) {
+                self.dayName = dayName
+                self.dayOfWeek = dayOfWeek
+                self.sessionCount = sessionCount
+                self.totalDurationSeconds = totalDurationSeconds
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case dayName
+                case dayOfWeek
+                case sessionCount
+                case totalDurationSeconds
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/GenreStatisticsResponse`.
+        internal struct GenreStatisticsResponse: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/GenreStatisticsResponse/averageSessionsPerBook`.
+            internal var averageSessionsPerBook: Swift.Double?
+            /// - Remark: Generated from `#/components/schemas/GenreStatisticsResponse/bookCount`.
+            internal var bookCount: Swift.Int64?
+            /// - Remark: Generated from `#/components/schemas/GenreStatisticsResponse/genre`.
+            internal var genre: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/GenreStatisticsResponse/totalDurationSeconds`.
+            internal var totalDurationSeconds: Swift.Int64?
+            /// - Remark: Generated from `#/components/schemas/GenreStatisticsResponse/totalSessions`.
+            internal var totalSessions: Swift.Int64?
+            /// Creates a new `GenreStatisticsResponse`.
+            ///
+            /// - Parameters:
+            ///   - averageSessionsPerBook:
+            ///   - bookCount:
+            ///   - genre:
+            ///   - totalDurationSeconds:
+            ///   - totalSessions:
+            internal init(
+                averageSessionsPerBook: Swift.Double? = nil,
+                bookCount: Swift.Int64? = nil,
+                genre: Swift.String? = nil,
+                totalDurationSeconds: Swift.Int64? = nil,
+                totalSessions: Swift.Int64? = nil
+            ) {
+                self.averageSessionsPerBook = averageSessionsPerBook
+                self.bookCount = bookCount
+                self.genre = genre
+                self.totalDurationSeconds = totalDurationSeconds
+                self.totalSessions = totalSessions
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case averageSessionsPerBook
+                case bookCount
+                case genre
+                case totalDurationSeconds
+                case totalSessions
             }
         }
         /// - Remark: Generated from `#/components/schemas/GlobalPreferences`.
@@ -2473,6 +2614,35 @@ extension Components {
                 case scrollLayout
             }
         }
+        /// - Remark: Generated from `#/components/schemas/PeakHoursResponse`.
+        internal struct PeakHoursResponse: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/PeakHoursResponse/hourOfDay`.
+            internal var hourOfDay: Swift.Int32?
+            /// - Remark: Generated from `#/components/schemas/PeakHoursResponse/sessionCount`.
+            internal var sessionCount: Swift.Int64?
+            /// - Remark: Generated from `#/components/schemas/PeakHoursResponse/totalDurationSeconds`.
+            internal var totalDurationSeconds: Swift.Int64?
+            /// Creates a new `PeakHoursResponse`.
+            ///
+            /// - Parameters:
+            ///   - hourOfDay:
+            ///   - sessionCount:
+            ///   - totalDurationSeconds:
+            internal init(
+                hourOfDay: Swift.Int32? = nil,
+                sessionCount: Swift.Int64? = nil,
+                totalDurationSeconds: Swift.Int64? = nil
+            ) {
+                self.hourOfDay = hourOfDay
+                self.sessionCount = sessionCount
+                self.totalDurationSeconds = totalDurationSeconds
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case hourOfDay
+                case sessionCount
+                case totalDurationSeconds
+            }
+        }
         /// - Remark: Generated from `#/components/schemas/PerBookSetting`.
         internal struct PerBookSetting: Codable, Hashable, Sendable {
             /// - Remark: Generated from `#/components/schemas/PerBookSetting/cbx`.
@@ -2561,6 +2731,151 @@ extension Components {
                 case oidcForceOnlyMode
                 case oidcProviderDetails
                 case remoteAuthEnabled
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/ReadingSessionRequest`.
+        internal struct ReadingSessionRequest: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/ReadingSessionRequest/bookId`.
+            internal var bookId: Swift.Int64
+            /// - Remark: Generated from `#/components/schemas/ReadingSessionRequest/bookType`.
+            internal enum BookTypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case pdf = "PDF"
+                case epub = "EPUB"
+                case cbx = "CBX"
+                case fb2 = "FB2"
+                case mobi = "MOBI"
+                case azw3 = "AZW3"
+                case audiobook = "AUDIOBOOK"
+            }
+            /// - Remark: Generated from `#/components/schemas/ReadingSessionRequest/bookType`.
+            internal var bookType: Components.Schemas.ReadingSessionRequest.BookTypePayload?
+            /// - Remark: Generated from `#/components/schemas/ReadingSessionRequest/durationFormatted`.
+            internal var durationFormatted: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/ReadingSessionRequest/durationSeconds`.
+            internal var durationSeconds: Swift.Int32
+            /// - Remark: Generated from `#/components/schemas/ReadingSessionRequest/endLocation`.
+            internal var endLocation: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/ReadingSessionRequest/endProgress`.
+            internal var endProgress: Swift.Float?
+            /// - Remark: Generated from `#/components/schemas/ReadingSessionRequest/endTime`.
+            internal var endTime: Foundation.Date
+            /// - Remark: Generated from `#/components/schemas/ReadingSessionRequest/progressDelta`.
+            internal var progressDelta: Swift.Float?
+            /// - Remark: Generated from `#/components/schemas/ReadingSessionRequest/startLocation`.
+            internal var startLocation: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/ReadingSessionRequest/startProgress`.
+            internal var startProgress: Swift.Float?
+            /// - Remark: Generated from `#/components/schemas/ReadingSessionRequest/startTime`.
+            internal var startTime: Foundation.Date
+            /// Creates a new `ReadingSessionRequest`.
+            ///
+            /// - Parameters:
+            ///   - bookId:
+            ///   - bookType:
+            ///   - durationFormatted:
+            ///   - durationSeconds:
+            ///   - endLocation:
+            ///   - endProgress:
+            ///   - endTime:
+            ///   - progressDelta:
+            ///   - startLocation:
+            ///   - startProgress:
+            ///   - startTime:
+            internal init(
+                bookId: Swift.Int64,
+                bookType: Components.Schemas.ReadingSessionRequest.BookTypePayload? = nil,
+                durationFormatted: Swift.String? = nil,
+                durationSeconds: Swift.Int32,
+                endLocation: Swift.String? = nil,
+                endProgress: Swift.Float? = nil,
+                endTime: Foundation.Date,
+                progressDelta: Swift.Float? = nil,
+                startLocation: Swift.String? = nil,
+                startProgress: Swift.Float? = nil,
+                startTime: Foundation.Date
+            ) {
+                self.bookId = bookId
+                self.bookType = bookType
+                self.durationFormatted = durationFormatted
+                self.durationSeconds = durationSeconds
+                self.endLocation = endLocation
+                self.endProgress = endProgress
+                self.endTime = endTime
+                self.progressDelta = progressDelta
+                self.startLocation = startLocation
+                self.startProgress = startProgress
+                self.startTime = startTime
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case bookId
+                case bookType
+                case durationFormatted
+                case durationSeconds
+                case endLocation
+                case endProgress
+                case endTime
+                case progressDelta
+                case startLocation
+                case startProgress
+                case startTime
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/ReadingStreakDay`.
+        internal struct ReadingStreakDay: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/ReadingStreakDay/active`.
+            internal var active: Swift.Bool?
+            /// - Remark: Generated from `#/components/schemas/ReadingStreakDay/date`.
+            internal var date: Swift.String?
+            /// Creates a new `ReadingStreakDay`.
+            ///
+            /// - Parameters:
+            ///   - active:
+            ///   - date:
+            internal init(
+                active: Swift.Bool? = nil,
+                date: Swift.String? = nil
+            ) {
+                self.active = active
+                self.date = date
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case active
+                case date
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/ReadingStreakResponse`.
+        internal struct ReadingStreakResponse: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/ReadingStreakResponse/currentStreak`.
+            internal var currentStreak: Swift.Int32?
+            /// - Remark: Generated from `#/components/schemas/ReadingStreakResponse/last52Weeks`.
+            internal var last52Weeks: [Components.Schemas.ReadingStreakDay]?
+            /// - Remark: Generated from `#/components/schemas/ReadingStreakResponse/longestStreak`.
+            internal var longestStreak: Swift.Int32?
+            /// - Remark: Generated from `#/components/schemas/ReadingStreakResponse/totalReadingDays`.
+            internal var totalReadingDays: Swift.Int32?
+            /// Creates a new `ReadingStreakResponse`.
+            ///
+            /// - Parameters:
+            ///   - currentStreak:
+            ///   - last52Weeks:
+            ///   - longestStreak:
+            ///   - totalReadingDays:
+            internal init(
+                currentStreak: Swift.Int32? = nil,
+                last52Weeks: [Components.Schemas.ReadingStreakDay]? = nil,
+                longestStreak: Swift.Int32? = nil,
+                totalReadingDays: Swift.Int32? = nil
+            ) {
+                self.currentStreak = currentStreak
+                self.last52Weeks = last52Weeks
+                self.longestStreak = longestStreak
+                self.totalReadingDays = totalReadingDays
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case currentStreak
+                case last52Weeks
+                case longestStreak
+                case totalReadingDays
             }
         }
         /// Refresh token request

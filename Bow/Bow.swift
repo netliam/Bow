@@ -12,6 +12,7 @@ import SwiftUI
     private let container: ModelContainer
     @State private var librarySync = LibrarySync()
     @State private var authors = AuthorDirectory()
+    @State private var readingStats = ReadingStatsStore()
     @State private var downloads: DownloadCenter
     @State private var importer: LocalImporter
     @State private var intake: BookIntake
@@ -44,6 +45,7 @@ import SwiftUI
                 .environment(importer)
                 .environment(authors)
                 .environment(intake)
+                .environment(readingStats)
                 .onOpenURL { url in intake.receive([url]) }
         }
         .modelContainer(container)

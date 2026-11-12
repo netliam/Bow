@@ -53,3 +53,10 @@ filter:
     # PDF annotations (one JSON blob per book, written by the web viewer's EmbedPDF)
     - getAnnotations
     - saveAnnotations
+    # Reading sessions and statistics
+    - recordReadingSession
+    - getReadingStreak
+    - getPeakReadingHours
+    - getFavoriteReadingDays
+    - getGenreStatistics
+    - getCompletionTimeline

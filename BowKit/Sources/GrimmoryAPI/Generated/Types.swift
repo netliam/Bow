@@ -233,6 +233,13 @@ internal protocol APIProtocol: Sendable {
     /// - Remark: HTTP `GET /api/v1/public-settings`.
     /// - Remark: Generated from `#/paths//api/v1/public-settings/get(getPublicSettings)`.
     func getPublicSettings(_ input: Operations.GetPublicSettings.Input) async throws -> Operations.GetPublicSettings.Output
+    /// Record a reading session
+    ///
+    /// Receive telemetry from the reader client and persist or log the session.
+    ///
+    /// - Remark: HTTP `POST /api/v1/reading-sessions`.
+    /// - Remark: Generated from `#/paths//api/v1/reading-sessions/post(recordReadingSession)`.
+    func recordReadingSession(_ input: Operations.RecordReadingSession.Input) async throws -> Operations.RecordReadingSession.Output
     /// Setup first user
     ///
     /// Provision the initial admin user during setup.
@@ -247,6 +254,41 @@ internal protocol APIProtocol: Sendable {
     /// - Remark: HTTP `GET /api/v1/setup/status`.
     /// - Remark: Generated from `#/paths//api/v1/setup/status/get(getSetupStatus)`.
     func getSetupStatus(_ input: Operations.GetSetupStatus.Input) async throws -> Operations.GetSetupStatus.Output
+    /// Get completion timeline
+    ///
+    /// Returns reading completion statistics over time with status breakdown for a specific year
+    ///
+    /// - Remark: HTTP `GET /api/v1/user-stats/reading/completion-timeline`.
+    /// - Remark: Generated from `#/paths//api/v1/user-stats/reading/completion-timeline/get(getCompletionTimeline)`.
+    func getCompletionTimeline(_ input: Operations.GetCompletionTimeline.Input) async throws -> Operations.GetCompletionTimeline.Output
+    /// Get favorite reading days
+    ///
+    /// Returns reading activity distribution by day of week. Can be filtered by year and/or month.
+    ///
+    /// - Remark: HTTP `GET /api/v1/user-stats/reading/favorite-days`.
+    /// - Remark: Generated from `#/paths//api/v1/user-stats/reading/favorite-days/get(getFavoriteReadingDays)`.
+    func getFavoriteReadingDays(_ input: Operations.GetFavoriteReadingDays.Input) async throws -> Operations.GetFavoriteReadingDays.Output
+    /// Get genre statistics
+    ///
+    /// Returns reading statistics grouped by book genres/categories
+    ///
+    /// - Remark: HTTP `GET /api/v1/user-stats/reading/genres`.
+    /// - Remark: Generated from `#/paths//api/v1/user-stats/reading/genres/get(getGenreStatistics)`.
+    func getGenreStatistics(_ input: Operations.GetGenreStatistics.Input) async throws -> Operations.GetGenreStatistics.Output
+    /// Get peak reading hours
+    ///
+    /// Returns reading activity distribution by hour of day. Can be filtered by year and/or month.
+    ///
+    /// - Remark: HTTP `GET /api/v1/user-stats/reading/peak-hours`.
+    /// - Remark: Generated from `#/paths//api/v1/user-stats/reading/peak-hours/get(getPeakReadingHours)`.
+    func getPeakReadingHours(_ input: Operations.GetPeakReadingHours.Input) async throws -> Operations.GetPeakReadingHours.Output
+    /// Get reading streak
+    ///
+    /// Returns current streak, longest streak, total reading days, and last 52 weeks of daily reading activity
+    ///
+    /// - Remark: HTTP `GET /api/v1/user-stats/reading/streak`.
+    /// - Remark: Generated from `#/paths//api/v1/user-stats/reading/streak/get(getReadingStreak)`.
+    func getReadingStreak(_ input: Operations.GetReadingStreak.Input) async throws -> Operations.GetReadingStreak.Output
     /// Change password
     ///
     /// Change the password for the current user.
@@ -724,6 +766,15 @@ extension APIProtocol {
     internal func getPublicSettings(headers: Operations.GetPublicSettings.Input.Headers = .init()) async throws -> Operations.GetPublicSettings.Output {
         try await getPublicSettings(Operations.GetPublicSettings.Input(headers: headers))
     }
+    /// Record a reading session
+    ///
+    /// Receive telemetry from the reader client and persist or log the session.
+    ///
+    /// - Remark: HTTP `POST /api/v1/reading-sessions`.
+    /// - Remark: Generated from `#/paths//api/v1/reading-sessions/post(recordReadingSession)`.
+    internal func recordReadingSession(body: Operations.RecordReadingSession.Input.Body) async throws -> Operations.RecordReadingSession.Output {
+        try await recordReadingSession(Operations.RecordReadingSession.Input(body: body))
+    }
     /// Setup first user
     ///
     /// Provision the initial admin user during setup.
@@ -747,6 +798,69 @@ extension APIProtocol {
     /// - Remark: Generated from `#/paths//api/v1/setup/status/get(getSetupStatus)`.
     internal func getSetupStatus(headers: Operations.GetSetupStatus.Input.Headers = .init()) async throws -> Operations.GetSetupStatus.Output {
         try await getSetupStatus(Operations.GetSetupStatus.Input(headers: headers))
+    }
+    /// Get completion timeline
+    ///
+    /// Returns reading completion statistics over time with status breakdown for a specific year
+    ///
+    /// - Remark: HTTP `GET /api/v1/user-stats/reading/completion-timeline`.
+    /// - Remark: Generated from `#/paths//api/v1/user-stats/reading/completion-timeline/get(getCompletionTimeline)`.
+    internal func getCompletionTimeline(
+        query: Operations.GetCompletionTimeline.Input.Query,
+        headers: Operations.GetCompletionTimeline.Input.Headers = .init()
+    ) async throws -> Operations.GetCompletionTimeline.Output {
+        try await getCompletionTimeline(Operations.GetCompletionTimeline.Input(
+            query: query,
+            headers: headers
+        ))
+    }
+    /// Get favorite reading days
+    ///
+    /// Returns reading activity distribution by day of week. Can be filtered by year and/or month.
+    ///
+    /// - Remark: HTTP `GET /api/v1/user-stats/reading/favorite-days`.
+    /// - Remark: Generated from `#/paths//api/v1/user-stats/reading/favorite-days/get(getFavoriteReadingDays)`.
+    internal func getFavoriteReadingDays(
+        query: Operations.GetFavoriteReadingDays.Input.Query = .init(),
+        headers: Operations.GetFavoriteReadingDays.Input.Headers = .init()
+    ) async throws -> Operations.GetFavoriteReadingDays.Output {
+        try await getFavoriteReadingDays(Operations.GetFavoriteReadingDays.Input(
+            query: query,
+            headers: headers
+        ))
+    }
+    /// Get genre statistics
+    ///
+    /// Returns reading statistics grouped by book genres/categories
+    ///
+    /// - Remark: HTTP `GET /api/v1/user-stats/reading/genres`.
+    /// - Remark: Generated from `#/paths//api/v1/user-stats/reading/genres/get(getGenreStatistics)`.
+    internal func getGenreStatistics(headers: Operations.GetGenreStatistics.Input.Headers = .init()) async throws -> Operations.GetGenreStatistics.Output {
+        try await getGenreStatistics(Operations.GetGenreStatistics.Input(headers: headers))
+    }
+    /// Get peak reading hours
+    ///
+    /// Returns reading activity distribution by hour of day. Can be filtered by year and/or month.
+    ///
+    /// - Remark: HTTP `GET /api/v1/user-stats/reading/peak-hours`.
+    /// - Remark: Generated from `#/paths//api/v1/user-stats/reading/peak-hours/get(getPeakReadingHours)`.
+    internal func getPeakReadingHours(
+        query: Operations.GetPeakReadingHours.Input.Query = .init(),
+        headers: Operations.GetPeakReadingHours.Input.Headers = .init()
+    ) async throws -> Operations.GetPeakReadingHours.Output {
+        try await getPeakReadingHours(Operations.GetPeakReadingHours.Input(
+            query: query,
+            headers: headers
+        ))
+    }
+    /// Get reading streak
+    ///
+    /// Returns current streak, longest streak, total reading days, and last 52 weeks of daily reading activity
+    ///
+    /// - Remark: HTTP `GET /api/v1/user-stats/reading/streak`.
+    /// - Remark: Generated from `#/paths//api/v1/user-stats/reading/streak/get(getReadingStreak)`.
+    internal func getReadingStreak(headers: Operations.GetReadingStreak.Input.Headers = .init()) async throws -> Operations.GetReadingStreak.Output {
+        try await getReadingStreak(Operations.GetReadingStreak.Input(headers: headers))
     }
     /// Change password
     ///

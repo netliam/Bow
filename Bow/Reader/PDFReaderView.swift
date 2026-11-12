@@ -14,6 +14,7 @@ struct PDFReaderView: View {
     let url: URL
     /// From 0.
     let startPage: Int
+    let sessions: ReadingSessionRecorder
     let onClose: () -> Void
 
     @Environment(\.modelContext) private var modelContext
@@ -105,7 +106,10 @@ struct PDFReaderView: View {
             }
             Button("Cancel", role: .cancel) { tappedHighlight = nil }
         }
-        .onAppear { page = startPage }
+        .onAppear {
+            page = startPage
+            sessions.activity(progress: nil, location: String(startPage + 1))
+        }
     }
 
     private func highlightBar(for selection: PDFSelection) -> some View {
@@ -178,6 +182,7 @@ struct PDFReaderView: View {
 
     /// Saves the page here, and sends it a moment after the reader settles on it.
     private func save(page index: Int, of count: Int) {
+        sessions.activity(progress: count > 0 ? Double(index + 1) / Double(count) * 100 : nil, location: String(index + 1))
         // Opening at the stored page isn't reading: sending it could replace a newer position from elsewhere.
         if book.progress?.spineIndex == index { return }
         let progress = book.progress ?? {

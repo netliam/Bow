@@ -79,6 +79,7 @@ extension View {
     func bookDestinations() -> some View {
         navigationDestination(for: Book.self) { BookDetailView(book: $0) }
             .navigationDestination(for: BookCollection.self) { CollectionView(collection: $0) }
+            .navigationDestination(for: StatsDestination.self) { _ in StatsView() }
             .navigationDestination(for: LibraryFilter.self) { filter in
                 LibraryContent(filter: filter, title: filter.title)
             }
