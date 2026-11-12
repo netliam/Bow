@@ -3,6 +3,476 @@
 import Foundation
 /// API operations, with input and output types, generated from `#/paths` in the OpenAPI document.
 internal enum Operations {
+    /// Create an annotation
+    ///
+    /// Create a new annotation (highlight, underline, etc.) for a book.
+    ///
+    /// - Remark: HTTP `POST /api/v1/annotations`.
+    /// - Remark: Generated from `#/paths//api/v1/annotations/post(createAnnotation)`.
+    internal enum CreateAnnotation {
+        internal static let id: Swift.String = "createAnnotation"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/api/v1/annotations/POST/header`.
+            internal struct Headers: Sendable, Hashable {
+                internal var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.CreateAnnotation.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                internal init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.CreateAnnotation.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            internal var headers: Operations.CreateAnnotation.Input.Headers
+            /// - Remark: Generated from `#/paths/api/v1/annotations/POST/requestBody`.
+            internal enum Body: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/api/v1/annotations/POST/requestBody/content/application\/json`.
+                case json(Components.Schemas.CreateAnnotationRequest)
+            }
+            internal var body: Operations.CreateAnnotation.Input.Body
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - headers:
+            ///   - body:
+            internal init(
+                headers: Operations.CreateAnnotation.Input.Headers = .init(),
+                body: Operations.CreateAnnotation.Input.Body
+            ) {
+                self.headers = headers
+                self.body = body
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/api/v1/annotations/POST/responses/200/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/api/v1/annotations/POST/responses/200/content/application\/json`.
+                    case json(Components.Schemas.Annotation)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.Annotation {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.CreateAnnotation.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.CreateAnnotation.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Annotation created successfully
+            ///
+            /// - Remark: Generated from `#/paths//api/v1/annotations/post(createAnnotation)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.CreateAnnotation.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            internal var ok: Operations.CreateAnnotation.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        internal enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            internal init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            internal var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            internal static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// Get annotations for a book
+    ///
+    /// Retrieve all annotations for a specific book.
+    ///
+    /// - Remark: HTTP `GET /api/v1/annotations/book/{bookId}`.
+    /// - Remark: Generated from `#/paths//api/v1/annotations/book/{bookId}/get(getAnnotationsForBook)`.
+    internal enum GetAnnotationsForBook {
+        internal static let id: Swift.String = "getAnnotationsForBook"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/api/v1/annotations/book/{bookId}/GET/path`.
+            internal struct Path: Sendable, Hashable {
+                /// ID of the book
+                ///
+                /// - Remark: Generated from `#/paths/api/v1/annotations/book/{bookId}/GET/path/bookId`.
+                internal var bookId: Swift.Int64
+                /// Creates a new `Path`.
+                ///
+                /// - Parameters:
+                ///   - bookId: ID of the book
+                internal init(bookId: Swift.Int64) {
+                    self.bookId = bookId
+                }
+            }
+            internal var path: Operations.GetAnnotationsForBook.Input.Path
+            /// - Remark: Generated from `#/paths/api/v1/annotations/book/{bookId}/GET/header`.
+            internal struct Headers: Sendable, Hashable {
+                internal var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.GetAnnotationsForBook.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                internal init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.GetAnnotationsForBook.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            internal var headers: Operations.GetAnnotationsForBook.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - path:
+            ///   - headers:
+            internal init(
+                path: Operations.GetAnnotationsForBook.Input.Path,
+                headers: Operations.GetAnnotationsForBook.Input.Headers = .init()
+            ) {
+                self.path = path
+                self.headers = headers
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/api/v1/annotations/book/{bookId}/GET/responses/200/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/api/v1/annotations/book/{bookId}/GET/responses/200/content/application\/json`.
+                    case json([Components.Schemas.Annotation])
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: [Components.Schemas.Annotation] {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.GetAnnotationsForBook.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.GetAnnotationsForBook.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Annotations returned successfully
+            ///
+            /// - Remark: Generated from `#/paths//api/v1/annotations/book/{bookId}/get(getAnnotationsForBook)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.GetAnnotationsForBook.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            internal var ok: Operations.GetAnnotationsForBook.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        internal enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            internal init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            internal var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            internal static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// Update an annotation
+    ///
+    /// Update an existing annotation's properties (color, style, note).
+    ///
+    /// - Remark: HTTP `PUT /api/v1/annotations/{annotationId}`.
+    /// - Remark: Generated from `#/paths//api/v1/annotations/{annotationId}/put(updateAnnotation)`.
+    internal enum UpdateAnnotation {
+        internal static let id: Swift.String = "updateAnnotation"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/api/v1/annotations/{annotationId}/PUT/path`.
+            internal struct Path: Sendable, Hashable {
+                /// ID of the annotation to update
+                ///
+                /// - Remark: Generated from `#/paths/api/v1/annotations/{annotationId}/PUT/path/annotationId`.
+                internal var annotationId: Swift.Int64
+                /// Creates a new `Path`.
+                ///
+                /// - Parameters:
+                ///   - annotationId: ID of the annotation to update
+                internal init(annotationId: Swift.Int64) {
+                    self.annotationId = annotationId
+                }
+            }
+            internal var path: Operations.UpdateAnnotation.Input.Path
+            /// - Remark: Generated from `#/paths/api/v1/annotations/{annotationId}/PUT/header`.
+            internal struct Headers: Sendable, Hashable {
+                internal var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.UpdateAnnotation.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                internal init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.UpdateAnnotation.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            internal var headers: Operations.UpdateAnnotation.Input.Headers
+            /// - Remark: Generated from `#/paths/api/v1/annotations/{annotationId}/PUT/requestBody`.
+            internal enum Body: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/api/v1/annotations/{annotationId}/PUT/requestBody/content/application\/json`.
+                case json(Components.Schemas.UpdateAnnotationRequest)
+            }
+            internal var body: Operations.UpdateAnnotation.Input.Body
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - path:
+            ///   - headers:
+            ///   - body:
+            internal init(
+                path: Operations.UpdateAnnotation.Input.Path,
+                headers: Operations.UpdateAnnotation.Input.Headers = .init(),
+                body: Operations.UpdateAnnotation.Input.Body
+            ) {
+                self.path = path
+                self.headers = headers
+                self.body = body
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/api/v1/annotations/{annotationId}/PUT/responses/200/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/api/v1/annotations/{annotationId}/PUT/responses/200/content/application\/json`.
+                    case json(Components.Schemas.Annotation)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.Annotation {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.UpdateAnnotation.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.UpdateAnnotation.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Annotation updated successfully
+            ///
+            /// - Remark: Generated from `#/paths//api/v1/annotations/{annotationId}/put(updateAnnotation)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.UpdateAnnotation.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            internal var ok: Operations.UpdateAnnotation.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        internal enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            internal init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            internal var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            internal static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// Delete an annotation
+    ///
+    /// Delete a specific annotation by its ID.
+    ///
+    /// - Remark: HTTP `DELETE /api/v1/annotations/{annotationId}`.
+    /// - Remark: Generated from `#/paths//api/v1/annotations/{annotationId}/delete(deleteAnnotation)`.
+    internal enum DeleteAnnotation {
+        internal static let id: Swift.String = "deleteAnnotation"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/api/v1/annotations/{annotationId}/DELETE/path`.
+            internal struct Path: Sendable, Hashable {
+                /// ID of the annotation to delete
+                ///
+                /// - Remark: Generated from `#/paths/api/v1/annotations/{annotationId}/DELETE/path/annotationId`.
+                internal var annotationId: Swift.Int64
+                /// Creates a new `Path`.
+                ///
+                /// - Parameters:
+                ///   - annotationId: ID of the annotation to delete
+                internal init(annotationId: Swift.Int64) {
+                    self.annotationId = annotationId
+                }
+            }
+            internal var path: Operations.DeleteAnnotation.Input.Path
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - path:
+            internal init(path: Operations.DeleteAnnotation.Input.Path) {
+                self.path = path
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct NoContent: Sendable, Hashable {
+                /// Creates a new `NoContent`.
+                internal init() {}
+            }
+            /// Annotation deleted successfully
+            ///
+            /// - Remark: Generated from `#/paths//api/v1/annotations/{annotationId}/delete(deleteAnnotation)/responses/204`.
+            ///
+            /// HTTP response code: `204 noContent`.
+            case noContent(Operations.DeleteAnnotation.Output.NoContent)
+            /// Annotation deleted successfully
+            ///
+            /// - Remark: Generated from `#/paths//api/v1/annotations/{annotationId}/delete(deleteAnnotation)/responses/204`.
+            ///
+            /// HTTP response code: `204 noContent`.
+            internal static var noContent: Self {
+                .noContent(.init())
+            }
+            /// The associated value of the enum case if `self` is `.noContent`.
+            ///
+            /// - Throws: An error if `self` is not `.noContent`.
+            /// - SeeAlso: `.noContent`.
+            internal var noContent: Operations.DeleteAnnotation.Output.NoContent {
+                get throws {
+                    switch self {
+                    case let .noContent(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "noContent",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+    }
     /// List app books
     ///
     /// Retrieve paginated books for the app with optional filtering and sorting.
@@ -2511,6 +2981,476 @@ internal enum Operations {
                     .json
                 ]
             }
+        }
+    }
+    /// Create a bookmark
+    ///
+    /// Create a new bookmark for a book.
+    ///
+    /// - Remark: HTTP `POST /api/v1/bookmarks`.
+    /// - Remark: Generated from `#/paths//api/v1/bookmarks/post(createBookmark)`.
+    internal enum CreateBookmark {
+        internal static let id: Swift.String = "createBookmark"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/api/v1/bookmarks/POST/header`.
+            internal struct Headers: Sendable, Hashable {
+                internal var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.CreateBookmark.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                internal init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.CreateBookmark.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            internal var headers: Operations.CreateBookmark.Input.Headers
+            /// - Remark: Generated from `#/paths/api/v1/bookmarks/POST/requestBody`.
+            internal enum Body: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/api/v1/bookmarks/POST/requestBody/content/application\/json`.
+                case json(Components.Schemas.CreateBookMarkRequest)
+            }
+            internal var body: Operations.CreateBookmark.Input.Body
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - headers:
+            ///   - body:
+            internal init(
+                headers: Operations.CreateBookmark.Input.Headers = .init(),
+                body: Operations.CreateBookmark.Input.Body
+            ) {
+                self.headers = headers
+                self.body = body
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/api/v1/bookmarks/POST/responses/200/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/api/v1/bookmarks/POST/responses/200/content/application\/json`.
+                    case json(Components.Schemas.BookMark)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.BookMark {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.CreateBookmark.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.CreateBookmark.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Bookmark created successfully
+            ///
+            /// - Remark: Generated from `#/paths//api/v1/bookmarks/post(createBookmark)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.CreateBookmark.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            internal var ok: Operations.CreateBookmark.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        internal enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            internal init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            internal var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            internal static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// Get bookmarks for a book
+    ///
+    /// Retrieve all bookmarks for a specific book.
+    ///
+    /// - Remark: HTTP `GET /api/v1/bookmarks/book/{bookId}`.
+    /// - Remark: Generated from `#/paths//api/v1/bookmarks/book/{bookId}/get(getBookmarksForBook)`.
+    internal enum GetBookmarksForBook {
+        internal static let id: Swift.String = "getBookmarksForBook"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/api/v1/bookmarks/book/{bookId}/GET/path`.
+            internal struct Path: Sendable, Hashable {
+                /// ID of the book
+                ///
+                /// - Remark: Generated from `#/paths/api/v1/bookmarks/book/{bookId}/GET/path/bookId`.
+                internal var bookId: Swift.Int64
+                /// Creates a new `Path`.
+                ///
+                /// - Parameters:
+                ///   - bookId: ID of the book
+                internal init(bookId: Swift.Int64) {
+                    self.bookId = bookId
+                }
+            }
+            internal var path: Operations.GetBookmarksForBook.Input.Path
+            /// - Remark: Generated from `#/paths/api/v1/bookmarks/book/{bookId}/GET/header`.
+            internal struct Headers: Sendable, Hashable {
+                internal var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.GetBookmarksForBook.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                internal init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.GetBookmarksForBook.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            internal var headers: Operations.GetBookmarksForBook.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - path:
+            ///   - headers:
+            internal init(
+                path: Operations.GetBookmarksForBook.Input.Path,
+                headers: Operations.GetBookmarksForBook.Input.Headers = .init()
+            ) {
+                self.path = path
+                self.headers = headers
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/api/v1/bookmarks/book/{bookId}/GET/responses/200/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/api/v1/bookmarks/book/{bookId}/GET/responses/200/content/application\/json`.
+                    case json([Components.Schemas.BookMark])
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: [Components.Schemas.BookMark] {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.GetBookmarksForBook.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.GetBookmarksForBook.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Bookmarks returned successfully
+            ///
+            /// - Remark: Generated from `#/paths//api/v1/bookmarks/book/{bookId}/get(getBookmarksForBook)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.GetBookmarksForBook.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            internal var ok: Operations.GetBookmarksForBook.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        internal enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            internal init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            internal var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            internal static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// Update a bookmark
+    ///
+    /// Update an existing bookmark's properties (title, location, color, etc.).
+    ///
+    /// - Remark: HTTP `PUT /api/v1/bookmarks/{bookmarkId}`.
+    /// - Remark: Generated from `#/paths//api/v1/bookmarks/{bookmarkId}/put(updateBookmark)`.
+    internal enum UpdateBookmark {
+        internal static let id: Swift.String = "updateBookmark"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/api/v1/bookmarks/{bookmarkId}/PUT/path`.
+            internal struct Path: Sendable, Hashable {
+                /// ID of the bookmark to update
+                ///
+                /// - Remark: Generated from `#/paths/api/v1/bookmarks/{bookmarkId}/PUT/path/bookmarkId`.
+                internal var bookmarkId: Swift.Int64
+                /// Creates a new `Path`.
+                ///
+                /// - Parameters:
+                ///   - bookmarkId: ID of the bookmark to update
+                internal init(bookmarkId: Swift.Int64) {
+                    self.bookmarkId = bookmarkId
+                }
+            }
+            internal var path: Operations.UpdateBookmark.Input.Path
+            /// - Remark: Generated from `#/paths/api/v1/bookmarks/{bookmarkId}/PUT/header`.
+            internal struct Headers: Sendable, Hashable {
+                internal var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.UpdateBookmark.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                internal init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.UpdateBookmark.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            internal var headers: Operations.UpdateBookmark.Input.Headers
+            /// - Remark: Generated from `#/paths/api/v1/bookmarks/{bookmarkId}/PUT/requestBody`.
+            internal enum Body: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/api/v1/bookmarks/{bookmarkId}/PUT/requestBody/content/application\/json`.
+                case json(Components.Schemas.UpdateBookMarkRequest)
+            }
+            internal var body: Operations.UpdateBookmark.Input.Body
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - path:
+            ///   - headers:
+            ///   - body:
+            internal init(
+                path: Operations.UpdateBookmark.Input.Path,
+                headers: Operations.UpdateBookmark.Input.Headers = .init(),
+                body: Operations.UpdateBookmark.Input.Body
+            ) {
+                self.path = path
+                self.headers = headers
+                self.body = body
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/api/v1/bookmarks/{bookmarkId}/PUT/responses/200/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/api/v1/bookmarks/{bookmarkId}/PUT/responses/200/content/application\/json`.
+                    case json(Components.Schemas.BookMark)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.BookMark {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.UpdateBookmark.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.UpdateBookmark.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Bookmark updated successfully
+            ///
+            /// - Remark: Generated from `#/paths//api/v1/bookmarks/{bookmarkId}/put(updateBookmark)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.UpdateBookmark.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            internal var ok: Operations.UpdateBookmark.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        internal enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            internal init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            internal var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            internal static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// Delete a bookmark
+    ///
+    /// Delete a specific bookmark by its ID.
+    ///
+    /// - Remark: HTTP `DELETE /api/v1/bookmarks/{bookmarkId}`.
+    /// - Remark: Generated from `#/paths//api/v1/bookmarks/{bookmarkId}/delete(deleteBookmark)`.
+    internal enum DeleteBookmark {
+        internal static let id: Swift.String = "deleteBookmark"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/api/v1/bookmarks/{bookmarkId}/DELETE/path`.
+            internal struct Path: Sendable, Hashable {
+                /// ID of the bookmark to delete
+                ///
+                /// - Remark: Generated from `#/paths/api/v1/bookmarks/{bookmarkId}/DELETE/path/bookmarkId`.
+                internal var bookmarkId: Swift.Int64
+                /// Creates a new `Path`.
+                ///
+                /// - Parameters:
+                ///   - bookmarkId: ID of the bookmark to delete
+                internal init(bookmarkId: Swift.Int64) {
+                    self.bookmarkId = bookmarkId
+                }
+            }
+            internal var path: Operations.DeleteBookmark.Input.Path
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - path:
+            internal init(path: Operations.DeleteBookmark.Input.Path) {
+                self.path = path
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct NoContent: Sendable, Hashable {
+                /// Creates a new `NoContent`.
+                internal init() {}
+            }
+            /// Bookmark deleted successfully
+            ///
+            /// - Remark: Generated from `#/paths//api/v1/bookmarks/{bookmarkId}/delete(deleteBookmark)/responses/204`.
+            ///
+            /// HTTP response code: `204 noContent`.
+            case noContent(Operations.DeleteBookmark.Output.NoContent)
+            /// Bookmark deleted successfully
+            ///
+            /// - Remark: Generated from `#/paths//api/v1/bookmarks/{bookmarkId}/delete(deleteBookmark)/responses/204`.
+            ///
+            /// HTTP response code: `204 noContent`.
+            internal static var noContent: Self {
+                .noContent(.init())
+            }
+            /// The associated value of the enum case if `self` is `.noContent`.
+            ///
+            /// - Throws: An error if `self` is not `.noContent`.
+            /// - SeeAlso: `.noContent`.
+            internal var noContent: Operations.DeleteBookmark.Output.NoContent {
+                get throws {
+                    switch self {
+                    case let .noContent(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "noContent",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
         }
     }
     /// Get a ping response

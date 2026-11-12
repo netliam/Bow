@@ -49,7 +49,6 @@
             "type": "string"
           },
           "createdAt": {
-            "format": "date-time",
             "type": "string"
           },
           "id": {
@@ -66,7 +65,6 @@
             "type": "string"
           },
           "updatedAt": {
-            "format": "date-time",
             "type": "string"
           },
           "userId": {
@@ -2232,7 +2230,6 @@
             "type": "string"
           },
           "createdAt": {
-            "format": "date-time",
             "type": "string"
           },
           "id": {
@@ -2262,7 +2259,6 @@
             "type": "integer"
           },
           "updatedAt": {
-            "format": "date-time",
             "type": "string"
           },
           "userId": {

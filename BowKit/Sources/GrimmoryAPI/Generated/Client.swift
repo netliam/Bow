@@ -34,6 +34,254 @@ internal struct Client: APIProtocol {
     private var converter: Converter {
         client.converter
     }
+    /// Create an annotation
+    ///
+    /// Create a new annotation (highlight, underline, etc.) for a book.
+    ///
+    /// - Remark: HTTP `POST /api/v1/annotations`.
+    /// - Remark: Generated from `#/paths//api/v1/annotations/post(createAnnotation)`.
+    internal func createAnnotation(_ input: Operations.CreateAnnotation.Input) async throws -> Operations.CreateAnnotation.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.CreateAnnotation.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/api/v1/annotations",
+                    parameters: []
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .post
+                )
+                suppressMutabilityWarning(&request)
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                let body: OpenAPIRuntime.HTTPBody?
+                switch input.body {
+                case let .json(value):
+                    body = try converter.setRequiredRequestBodyAsJSON(
+                        value,
+                        headerFields: &request.headerFields,
+                        contentType: "application/json; charset=utf-8"
+                    )
+                }
+                return (request, body)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.CreateAnnotation.Output.Ok.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Components.Schemas.Annotation.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .ok(.init(body: body))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
+    /// Get annotations for a book
+    ///
+    /// Retrieve all annotations for a specific book.
+    ///
+    /// - Remark: HTTP `GET /api/v1/annotations/book/{bookId}`.
+    /// - Remark: Generated from `#/paths//api/v1/annotations/book/{bookId}/get(getAnnotationsForBook)`.
+    internal func getAnnotationsForBook(_ input: Operations.GetAnnotationsForBook.Input) async throws -> Operations.GetAnnotationsForBook.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.GetAnnotationsForBook.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/api/v1/annotations/book/{}",
+                    parameters: [
+                        input.path.bookId
+                    ]
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .get
+                )
+                suppressMutabilityWarning(&request)
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                return (request, nil)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.GetAnnotationsForBook.Output.Ok.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            [Components.Schemas.Annotation].self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .ok(.init(body: body))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
+    /// Update an annotation
+    ///
+    /// Update an existing annotation's properties (color, style, note).
+    ///
+    /// - Remark: HTTP `PUT /api/v1/annotations/{annotationId}`.
+    /// - Remark: Generated from `#/paths//api/v1/annotations/{annotationId}/put(updateAnnotation)`.
+    internal func updateAnnotation(_ input: Operations.UpdateAnnotation.Input) async throws -> Operations.UpdateAnnotation.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.UpdateAnnotation.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/api/v1/annotations/{}",
+                    parameters: [
+                        input.path.annotationId
+                    ]
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .put
+                )
+                suppressMutabilityWarning(&request)
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                let body: OpenAPIRuntime.HTTPBody?
+                switch input.body {
+                case let .json(value):
+                    body = try converter.setRequiredRequestBodyAsJSON(
+                        value,
+                        headerFields: &request.headerFields,
+                        contentType: "application/json; charset=utf-8"
+                    )
+                }
+                return (request, body)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.UpdateAnnotation.Output.Ok.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Components.Schemas.Annotation.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .ok(.init(body: body))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
+    /// Delete an annotation
+    ///
+    /// Delete a specific annotation by its ID.
+    ///
+    /// - Remark: HTTP `DELETE /api/v1/annotations/{annotationId}`.
+    /// - Remark: Generated from `#/paths//api/v1/annotations/{annotationId}/delete(deleteAnnotation)`.
+    internal func deleteAnnotation(_ input: Operations.DeleteAnnotation.Input) async throws -> Operations.DeleteAnnotation.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.DeleteAnnotation.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/api/v1/annotations/{}",
+                    parameters: [
+                        input.path.annotationId
+                    ]
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .delete
+                )
+                suppressMutabilityWarning(&request)
+                return (request, nil)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 204:
+                    return .noContent(.init())
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
     /// List app books
     ///
     /// Retrieve paginated books for the app with optional filtering and sorting.
@@ -1747,6 +1995,254 @@ internal struct Client: APIProtocol {
                         preconditionFailure("bestContentType chose an invalid content type.")
                     }
                     return .forbidden(.init(body: body))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
+    /// Create a bookmark
+    ///
+    /// Create a new bookmark for a book.
+    ///
+    /// - Remark: HTTP `POST /api/v1/bookmarks`.
+    /// - Remark: Generated from `#/paths//api/v1/bookmarks/post(createBookmark)`.
+    internal func createBookmark(_ input: Operations.CreateBookmark.Input) async throws -> Operations.CreateBookmark.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.CreateBookmark.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/api/v1/bookmarks",
+                    parameters: []
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .post
+                )
+                suppressMutabilityWarning(&request)
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                let body: OpenAPIRuntime.HTTPBody?
+                switch input.body {
+                case let .json(value):
+                    body = try converter.setRequiredRequestBodyAsJSON(
+                        value,
+                        headerFields: &request.headerFields,
+                        contentType: "application/json; charset=utf-8"
+                    )
+                }
+                return (request, body)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.CreateBookmark.Output.Ok.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Components.Schemas.BookMark.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .ok(.init(body: body))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
+    /// Get bookmarks for a book
+    ///
+    /// Retrieve all bookmarks for a specific book.
+    ///
+    /// - Remark: HTTP `GET /api/v1/bookmarks/book/{bookId}`.
+    /// - Remark: Generated from `#/paths//api/v1/bookmarks/book/{bookId}/get(getBookmarksForBook)`.
+    internal func getBookmarksForBook(_ input: Operations.GetBookmarksForBook.Input) async throws -> Operations.GetBookmarksForBook.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.GetBookmarksForBook.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/api/v1/bookmarks/book/{}",
+                    parameters: [
+                        input.path.bookId
+                    ]
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .get
+                )
+                suppressMutabilityWarning(&request)
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                return (request, nil)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.GetBookmarksForBook.Output.Ok.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            [Components.Schemas.BookMark].self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .ok(.init(body: body))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
+    /// Update a bookmark
+    ///
+    /// Update an existing bookmark's properties (title, location, color, etc.).
+    ///
+    /// - Remark: HTTP `PUT /api/v1/bookmarks/{bookmarkId}`.
+    /// - Remark: Generated from `#/paths//api/v1/bookmarks/{bookmarkId}/put(updateBookmark)`.
+    internal func updateBookmark(_ input: Operations.UpdateBookmark.Input) async throws -> Operations.UpdateBookmark.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.UpdateBookmark.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/api/v1/bookmarks/{}",
+                    parameters: [
+                        input.path.bookmarkId
+                    ]
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .put
+                )
+                suppressMutabilityWarning(&request)
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                let body: OpenAPIRuntime.HTTPBody?
+                switch input.body {
+                case let .json(value):
+                    body = try converter.setRequiredRequestBodyAsJSON(
+                        value,
+                        headerFields: &request.headerFields,
+                        contentType: "application/json; charset=utf-8"
+                    )
+                }
+                return (request, body)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.UpdateBookmark.Output.Ok.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Components.Schemas.BookMark.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .ok(.init(body: body))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
+    /// Delete a bookmark
+    ///
+    /// Delete a specific bookmark by its ID.
+    ///
+    /// - Remark: HTTP `DELETE /api/v1/bookmarks/{bookmarkId}`.
+    /// - Remark: Generated from `#/paths//api/v1/bookmarks/{bookmarkId}/delete(deleteBookmark)`.
+    internal func deleteBookmark(_ input: Operations.DeleteBookmark.Input) async throws -> Operations.DeleteBookmark.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.DeleteBookmark.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/api/v1/bookmarks/{}",
+                    parameters: [
+                        input.path.bookmarkId
+                    ]
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .delete
+                )
+                suppressMutabilityWarning(&request)
+                return (request, nil)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 204:
+                    return .noContent(.init())
                 default:
                     return .undocumented(
                         statusCode: response.status.code,

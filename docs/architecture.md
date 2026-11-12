@@ -93,7 +93,7 @@ Dependency direction: `App → BowReaders/BowSync/BowLibrary → BowModel`, `Bow
     refreshes the catalog.
 - **Not done yet:**
   - PDF and comics show a "not supported yet" message.
-  - Annotations stay local until Phase 2.
+  - Annotations sync both ways (Phase 2).
   - Background tasks need a real bundle ID and a signed build to run on a device.
 - `BowReaders` isn't needed yet: the EPUB adapter lives in the app, because the kit is iOS/Catalyst-only and would
   stop `swift test` running on the Mac host.
@@ -188,9 +188,10 @@ Every feature is gated by the user's Grimmory **permissions** (`/app/users/me`).
 - **Conflicts:**
   - Progress: furthest-read wins if it's within a few minutes of the other device's update, otherwise latest
     `updatedAt` wins. Show "Jump to page X from iPad?" when the server is ahead of an open book.
-  - Annotations: match by `remoteId` (falling back to CFI + text for a first sync). Last-write-wins per
-    annotation using **server** timestamps only, since Grimmory's are `LocalDateTime` with no time zone. Tombstones
-    beat edits older than them. An update or delete waits for its create to return a `remoteId`.
+  - Annotations: match by `remoteId`. The server's copy wins unless this device has a change for that annotation
+    still queued (Grimmory's timestamps have no time zone, so there's no last-write-wins). Deletes are tombstones
+    until the server confirms. Push and pull run in the main context, where the reader edits annotations, so a
+    `remoteId` set by a push is never hidden from the next edit. Pulled on opening a book, pushed with the outbox.
   - Metadata/shelves: server wins, unless a local edit is still pending.
 - **Auth:** access tokens last 2 hours, and refresh tokens last 30 days and **rotate** on each use.
   `GrimmoryClient` single-flights the refresh: one refresh in flight, and every other 401 waits for it. A

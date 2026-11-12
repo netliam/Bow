@@ -95,6 +95,8 @@ struct ReaderScreen: View {
             return
         }
 
+        await syncAnnotations(in: epub)
+
         guard let server = await newerServerPosition(in: epub) else {
             start(epub, at: nil)
             return
@@ -132,6 +134,32 @@ struct ReaderScreen: View {
 
         guard let target = await DCCFIConverter(book: epub).coords(fromCFI: cfi) else { return nil }
         return ServerPosition(spineIndex: target.spineIndex, coords: target.coords, percentage: server.percentage)
+    }
+
+    /// Brings in annotations made elsewhere (Grimmory's web reader, other devices) and places them in this
+    /// edition. Like the position check, it gives up after a few seconds rather than hold the book closed.
+    private func syncAnnotations(in epub: DCEpubBook) async {
+        if book.remoteID != nil, let account = book.account, let client = GrimmoryAccounts.client(for: account) {
+            let syncer = AnnotationSyncer(context: modelContext)
+            let bookID = book.id
+            let pull = Task { try await syncer.pull(bookID: bookID, from: client) }
+            let timeout = Task {
+                try await Task.sleep(for: .seconds(4))
+                pull.cancel()
+            }
+            _ = try? await pull.value
+            timeout.cancel()
+        }
+
+        let unplaced = book.annotations.filter { $0.deletedAt == nil && $0.kitCoords == nil && $0.cfi != nil }
+        guard !unplaced.isEmpty else { return }
+        let converter = DCCFIConverter(book: epub)
+        for annotation in unplaced {
+            guard let cfi = annotation.cfi, let place = await converter.coords(fromCFI: cfi) else { continue }
+            annotation.kitCoords = place.coords
+            annotation.spineIndex = place.spineIndex
+        }
+        try? modelContext.save()
     }
 
     private func start(_ epub: DCEpubBook, at server: ServerPosition?) {

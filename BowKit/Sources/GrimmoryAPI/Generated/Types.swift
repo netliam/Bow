@@ -3,6 +3,34 @@
 import Foundation
 /// A type that performs HTTP operations defined by the OpenAPI document.
 internal protocol APIProtocol: Sendable {
+    /// Create an annotation
+    ///
+    /// Create a new annotation (highlight, underline, etc.) for a book.
+    ///
+    /// - Remark: HTTP `POST /api/v1/annotations`.
+    /// - Remark: Generated from `#/paths//api/v1/annotations/post(createAnnotation)`.
+    func createAnnotation(_ input: Operations.CreateAnnotation.Input) async throws -> Operations.CreateAnnotation.Output
+    /// Get annotations for a book
+    ///
+    /// Retrieve all annotations for a specific book.
+    ///
+    /// - Remark: HTTP `GET /api/v1/annotations/book/{bookId}`.
+    /// - Remark: Generated from `#/paths//api/v1/annotations/book/{bookId}/get(getAnnotationsForBook)`.
+    func getAnnotationsForBook(_ input: Operations.GetAnnotationsForBook.Input) async throws -> Operations.GetAnnotationsForBook.Output
+    /// Update an annotation
+    ///
+    /// Update an existing annotation's properties (color, style, note).
+    ///
+    /// - Remark: HTTP `PUT /api/v1/annotations/{annotationId}`.
+    /// - Remark: Generated from `#/paths//api/v1/annotations/{annotationId}/put(updateAnnotation)`.
+    func updateAnnotation(_ input: Operations.UpdateAnnotation.Input) async throws -> Operations.UpdateAnnotation.Output
+    /// Delete an annotation
+    ///
+    /// Delete a specific annotation by its ID.
+    ///
+    /// - Remark: HTTP `DELETE /api/v1/annotations/{annotationId}`.
+    /// - Remark: Generated from `#/paths//api/v1/annotations/{annotationId}/delete(deleteAnnotation)`.
+    func deleteAnnotation(_ input: Operations.DeleteAnnotation.Input) async throws -> Operations.DeleteAnnotation.Output
     /// List app books
     ///
     /// Retrieve paginated books for the app with optional filtering and sorting.
@@ -114,6 +142,34 @@ internal protocol APIProtocol: Sendable {
     /// - Remark: HTTP `GET /api/v1/auth/remote`.
     /// - Remark: Generated from `#/paths//api/v1/auth/remote/get(loginRemote)`.
     func loginRemote(_ input: Operations.LoginRemote.Input) async throws -> Operations.LoginRemote.Output
+    /// Create a bookmark
+    ///
+    /// Create a new bookmark for a book.
+    ///
+    /// - Remark: HTTP `POST /api/v1/bookmarks`.
+    /// - Remark: Generated from `#/paths//api/v1/bookmarks/post(createBookmark)`.
+    func createBookmark(_ input: Operations.CreateBookmark.Input) async throws -> Operations.CreateBookmark.Output
+    /// Get bookmarks for a book
+    ///
+    /// Retrieve all bookmarks for a specific book.
+    ///
+    /// - Remark: HTTP `GET /api/v1/bookmarks/book/{bookId}`.
+    /// - Remark: Generated from `#/paths//api/v1/bookmarks/book/{bookId}/get(getBookmarksForBook)`.
+    func getBookmarksForBook(_ input: Operations.GetBookmarksForBook.Input) async throws -> Operations.GetBookmarksForBook.Output
+    /// Update a bookmark
+    ///
+    /// Update an existing bookmark's properties (title, location, color, etc.).
+    ///
+    /// - Remark: HTTP `PUT /api/v1/bookmarks/{bookmarkId}`.
+    /// - Remark: Generated from `#/paths//api/v1/bookmarks/{bookmarkId}/put(updateBookmark)`.
+    func updateBookmark(_ input: Operations.UpdateBookmark.Input) async throws -> Operations.UpdateBookmark.Output
+    /// Delete a bookmark
+    ///
+    /// Delete a specific bookmark by its ID.
+    ///
+    /// - Remark: HTTP `DELETE /api/v1/bookmarks/{bookmarkId}`.
+    /// - Remark: Generated from `#/paths//api/v1/bookmarks/{bookmarkId}/delete(deleteBookmark)`.
+    func deleteBookmark(_ input: Operations.DeleteBookmark.Input) async throws -> Operations.DeleteBookmark.Output
     /// Get a ping response
     ///
     /// Check if the application is responding
@@ -167,6 +223,62 @@ internal protocol APIProtocol: Sendable {
 
 /// Convenience overloads for operation inputs.
 extension APIProtocol {
+    /// Create an annotation
+    ///
+    /// Create a new annotation (highlight, underline, etc.) for a book.
+    ///
+    /// - Remark: HTTP `POST /api/v1/annotations`.
+    /// - Remark: Generated from `#/paths//api/v1/annotations/post(createAnnotation)`.
+    internal func createAnnotation(
+        headers: Operations.CreateAnnotation.Input.Headers = .init(),
+        body: Operations.CreateAnnotation.Input.Body
+    ) async throws -> Operations.CreateAnnotation.Output {
+        try await createAnnotation(Operations.CreateAnnotation.Input(
+            headers: headers,
+            body: body
+        ))
+    }
+    /// Get annotations for a book
+    ///
+    /// Retrieve all annotations for a specific book.
+    ///
+    /// - Remark: HTTP `GET /api/v1/annotations/book/{bookId}`.
+    /// - Remark: Generated from `#/paths//api/v1/annotations/book/{bookId}/get(getAnnotationsForBook)`.
+    internal func getAnnotationsForBook(
+        path: Operations.GetAnnotationsForBook.Input.Path,
+        headers: Operations.GetAnnotationsForBook.Input.Headers = .init()
+    ) async throws -> Operations.GetAnnotationsForBook.Output {
+        try await getAnnotationsForBook(Operations.GetAnnotationsForBook.Input(
+            path: path,
+            headers: headers
+        ))
+    }
+    /// Update an annotation
+    ///
+    /// Update an existing annotation's properties (color, style, note).
+    ///
+    /// - Remark: HTTP `PUT /api/v1/annotations/{annotationId}`.
+    /// - Remark: Generated from `#/paths//api/v1/annotations/{annotationId}/put(updateAnnotation)`.
+    internal func updateAnnotation(
+        path: Operations.UpdateAnnotation.Input.Path,
+        headers: Operations.UpdateAnnotation.Input.Headers = .init(),
+        body: Operations.UpdateAnnotation.Input.Body
+    ) async throws -> Operations.UpdateAnnotation.Output {
+        try await updateAnnotation(Operations.UpdateAnnotation.Input(
+            path: path,
+            headers: headers,
+            body: body
+        ))
+    }
+    /// Delete an annotation
+    ///
+    /// Delete a specific annotation by its ID.
+    ///
+    /// - Remark: HTTP `DELETE /api/v1/annotations/{annotationId}`.
+    /// - Remark: Generated from `#/paths//api/v1/annotations/{annotationId}/delete(deleteAnnotation)`.
+    internal func deleteAnnotation(path: Operations.DeleteAnnotation.Input.Path) async throws -> Operations.DeleteAnnotation.Output {
+        try await deleteAnnotation(Operations.DeleteAnnotation.Input(path: path))
+    }
     /// List app books
     ///
     /// Retrieve paginated books for the app with optional filtering and sorting.
@@ -395,6 +507,62 @@ extension APIProtocol {
     /// - Remark: Generated from `#/paths//api/v1/auth/remote/get(loginRemote)`.
     internal func loginRemote(headers: Operations.LoginRemote.Input.Headers = .init()) async throws -> Operations.LoginRemote.Output {
         try await loginRemote(Operations.LoginRemote.Input(headers: headers))
+    }
+    /// Create a bookmark
+    ///
+    /// Create a new bookmark for a book.
+    ///
+    /// - Remark: HTTP `POST /api/v1/bookmarks`.
+    /// - Remark: Generated from `#/paths//api/v1/bookmarks/post(createBookmark)`.
+    internal func createBookmark(
+        headers: Operations.CreateBookmark.Input.Headers = .init(),
+        body: Operations.CreateBookmark.Input.Body
+    ) async throws -> Operations.CreateBookmark.Output {
+        try await createBookmark(Operations.CreateBookmark.Input(
+            headers: headers,
+            body: body
+        ))
+    }
+    /// Get bookmarks for a book
+    ///
+    /// Retrieve all bookmarks for a specific book.
+    ///
+    /// - Remark: HTTP `GET /api/v1/bookmarks/book/{bookId}`.
+    /// - Remark: Generated from `#/paths//api/v1/bookmarks/book/{bookId}/get(getBookmarksForBook)`.
+    internal func getBookmarksForBook(
+        path: Operations.GetBookmarksForBook.Input.Path,
+        headers: Operations.GetBookmarksForBook.Input.Headers = .init()
+    ) async throws -> Operations.GetBookmarksForBook.Output {
+        try await getBookmarksForBook(Operations.GetBookmarksForBook.Input(
+            path: path,
+            headers: headers
+        ))
+    }
+    /// Update a bookmark
+    ///
+    /// Update an existing bookmark's properties (title, location, color, etc.).
+    ///
+    /// - Remark: HTTP `PUT /api/v1/bookmarks/{bookmarkId}`.
+    /// - Remark: Generated from `#/paths//api/v1/bookmarks/{bookmarkId}/put(updateBookmark)`.
+    internal func updateBookmark(
+        path: Operations.UpdateBookmark.Input.Path,
+        headers: Operations.UpdateBookmark.Input.Headers = .init(),
+        body: Operations.UpdateBookmark.Input.Body
+    ) async throws -> Operations.UpdateBookmark.Output {
+        try await updateBookmark(Operations.UpdateBookmark.Input(
+            path: path,
+            headers: headers,
+            body: body
+        ))
+    }
+    /// Delete a bookmark
+    ///
+    /// Delete a specific bookmark by its ID.
+    ///
+    /// - Remark: HTTP `DELETE /api/v1/bookmarks/{bookmarkId}`.
+    /// - Remark: Generated from `#/paths//api/v1/bookmarks/{bookmarkId}/delete(deleteBookmark)`.
+    internal func deleteBookmark(path: Operations.DeleteBookmark.Input.Path) async throws -> Operations.DeleteBookmark.Output {
+        try await deleteBookmark(Operations.DeleteBookmark.Input(path: path))
     }
     /// Get a ping response
     ///

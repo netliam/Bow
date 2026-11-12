@@ -228,18 +228,20 @@ Grimmory keeps three separate resources. The kit has one `DCHighlight` with `typ
 | **Book note v2** | `GET /api/v2/book-notes/book/{bookId}`, `POST /api/v2/book-notes`, `PUT /api/v2/book-notes/{id}`, `DELETE /api/v2/book-notes/{id}` | `id, bookId, cfi, selectedText, noteContent, color, chapterTitle` | Show read-only at first (see open questions) |
 | Notebook | `GET /api/v1/app/notebook/books`, `GET /api/v1/app/notebook/books/{id}/entries` | All of the above across books | "Notebook" screen |
 
-What Bow has to handle:
+What Bow does (`BowSync/AnnotationSync.swift`, checked against a real Grimmory v3.5.0):
 - **IDs:** server IDs are `Long`, and the server doesn't accept a client ID. Bow keeps its own `uuid` and stores
-  `remoteId` once `POST` returns. A `PendingChange` for an unsynced annotation's update or delete must wait for
-  its create.
-- **Timestamps:** `createdAt`/`updatedAt` are `LocalDateTime`, with **no time zone**. Only compare server
-  timestamps with other server timestamps. Never compare them with device clocks for last-write-wins.
-- **Colors:** the web palette is yellow `#FACC15`, green `#4ADE80`, blue `#38BDF8`, pink `#F472B6` and orange
-  `#FB923C`, plus darker variants. The kit has `yellow, green, blue, pink, purple, underline`. Map the first four
-  one-to-one, and `underline` to `style: underline`. **Purple has no web equivalent, and orange has no kit
-  equivalent.** See kit follow-up #14.
-- **Styles:** the web's `strikethrough` and `squiggly` styles have no kit style. Show them as a plain highlight in
-  the annotation's color, and keep the original style when writing back.
+  `remoteId` once `POST` returns. Whether a queued change is a create or an update is decided when it's sent.
+- **What can change:** `PUT /annotations/{id}` takes only `color`, `style` and `note`. The text and CFI are fixed
+  at creation. Bookmarks take `title` and `cfi`.
+- **Timestamps:** `createdAt`/`updatedAt` are `LocalDateTime`, with **no time zone** and microseconds
+  (`2026-11-12T16:24:30.857306`). The spec says `date-time`, which fails to decode, so the patch script makes
+  them strings. Bow doesn't use them: there's no last-write-wins. The server's copy wins, unless this device has a
+  change for that annotation still waiting to go out.
+- **Deletes:** `204`, then `404` once gone. Bow treats a `404` on update or delete as already deleted.
+- **CFIs:** highlights are range CFIs (`epubcfi(/6/6[c3]!/4/4,/1:86,/1:94)`), bookmarks point CFIs. The kit's
+  `DCCFIConverter` converts both ways. Annotations whose CFI doesn't place in this edition are kept but not drawn.
+- **Colors and styles:** the kit (0.2.0) takes Grimmory's exact palettes and all four styles, so nothing is mapped
+  or lost.
 - **PDF annotations:** separate `GET/PUT/DELETE /api/v1/pdf-annotations/book/{bookId}`, a whole-document blob per book.
 
 ## Shelves, metadata, and other web features

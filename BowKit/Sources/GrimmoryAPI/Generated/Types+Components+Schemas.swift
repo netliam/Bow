@@ -39,6 +39,83 @@ extension Components {
                 case refreshToken
             }
         }
+        /// - Remark: Generated from `#/components/schemas/Annotation`.
+        internal struct Annotation: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/Annotation/bookId`.
+            internal var bookId: Swift.Int64?
+            /// - Remark: Generated from `#/components/schemas/Annotation/cfi`.
+            internal var cfi: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/Annotation/chapterTitle`.
+            internal var chapterTitle: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/Annotation/color`.
+            internal var color: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/Annotation/createdAt`.
+            internal var createdAt: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/Annotation/id`.
+            internal var id: Swift.Int64?
+            /// - Remark: Generated from `#/components/schemas/Annotation/note`.
+            internal var note: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/Annotation/style`.
+            internal var style: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/Annotation/text`.
+            internal var text: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/Annotation/updatedAt`.
+            internal var updatedAt: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/Annotation/userId`.
+            internal var userId: Swift.Int64?
+            /// Creates a new `Annotation`.
+            ///
+            /// - Parameters:
+            ///   - bookId:
+            ///   - cfi:
+            ///   - chapterTitle:
+            ///   - color:
+            ///   - createdAt:
+            ///   - id:
+            ///   - note:
+            ///   - style:
+            ///   - text:
+            ///   - updatedAt:
+            ///   - userId:
+            internal init(
+                bookId: Swift.Int64? = nil,
+                cfi: Swift.String? = nil,
+                chapterTitle: Swift.String? = nil,
+                color: Swift.String? = nil,
+                createdAt: Swift.String? = nil,
+                id: Swift.Int64? = nil,
+                note: Swift.String? = nil,
+                style: Swift.String? = nil,
+                text: Swift.String? = nil,
+                updatedAt: Swift.String? = nil,
+                userId: Swift.Int64? = nil
+            ) {
+                self.bookId = bookId
+                self.cfi = cfi
+                self.chapterTitle = chapterTitle
+                self.color = color
+                self.createdAt = createdAt
+                self.id = id
+                self.note = note
+                self.style = style
+                self.text = text
+                self.updatedAt = updatedAt
+                self.userId = userId
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case bookId
+                case cfi
+                case chapterTitle
+                case color
+                case createdAt
+                case id
+                case note
+                case style
+                case text
+                case updatedAt
+                case userId
+            }
+        }
         /// - Remark: Generated from `#/components/schemas/AppBookDetail`.
         internal struct AppBookDetail: Codable, Hashable, Sendable {
             /// - Remark: Generated from `#/components/schemas/AppBookDetail/addedOn`.
@@ -1001,6 +1078,95 @@ extension Components {
                 case username
             }
         }
+        /// - Remark: Generated from `#/components/schemas/BookMark`.
+        internal struct BookMark: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/BookMark/bookId`.
+            internal var bookId: Swift.Int64?
+            /// - Remark: Generated from `#/components/schemas/BookMark/cfi`.
+            internal var cfi: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/BookMark/color`.
+            internal var color: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/BookMark/createdAt`.
+            internal var createdAt: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/BookMark/id`.
+            internal var id: Swift.Int64?
+            /// - Remark: Generated from `#/components/schemas/BookMark/notes`.
+            internal var notes: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/BookMark/pageNumber`.
+            internal var pageNumber: Swift.Int32?
+            /// - Remark: Generated from `#/components/schemas/BookMark/positionMs`.
+            internal var positionMs: Swift.Int64?
+            /// - Remark: Generated from `#/components/schemas/BookMark/priority`.
+            internal var priority: Swift.Int32?
+            /// - Remark: Generated from `#/components/schemas/BookMark/title`.
+            internal var title: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/BookMark/trackIndex`.
+            internal var trackIndex: Swift.Int32?
+            /// - Remark: Generated from `#/components/schemas/BookMark/updatedAt`.
+            internal var updatedAt: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/BookMark/userId`.
+            internal var userId: Swift.Int64?
+            /// Creates a new `BookMark`.
+            ///
+            /// - Parameters:
+            ///   - bookId:
+            ///   - cfi:
+            ///   - color:
+            ///   - createdAt:
+            ///   - id:
+            ///   - notes:
+            ///   - pageNumber:
+            ///   - positionMs:
+            ///   - priority:
+            ///   - title:
+            ///   - trackIndex:
+            ///   - updatedAt:
+            ///   - userId:
+            internal init(
+                bookId: Swift.Int64? = nil,
+                cfi: Swift.String? = nil,
+                color: Swift.String? = nil,
+                createdAt: Swift.String? = nil,
+                id: Swift.Int64? = nil,
+                notes: Swift.String? = nil,
+                pageNumber: Swift.Int32? = nil,
+                positionMs: Swift.Int64? = nil,
+                priority: Swift.Int32? = nil,
+                title: Swift.String? = nil,
+                trackIndex: Swift.Int32? = nil,
+                updatedAt: Swift.String? = nil,
+                userId: Swift.Int64? = nil
+            ) {
+                self.bookId = bookId
+                self.cfi = cfi
+                self.color = color
+                self.createdAt = createdAt
+                self.id = id
+                self.notes = notes
+                self.pageNumber = pageNumber
+                self.positionMs = positionMs
+                self.priority = priority
+                self.title = title
+                self.trackIndex = trackIndex
+                self.updatedAt = updatedAt
+                self.userId = userId
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case bookId
+                case cfi
+                case color
+                case createdAt
+                case id
+                case notes
+                case pageNumber
+                case positionMs
+                case priority
+                case title
+                case trackIndex
+                case updatedAt
+                case userId
+            }
+        }
         /// - Remark: Generated from `#/components/schemas/CbxProgress`.
         internal struct CbxProgress: Codable, Hashable, Sendable {
             /// - Remark: Generated from `#/components/schemas/CbxProgress/page`.
@@ -1159,6 +1325,122 @@ extension Components {
                 case groups
                 case name
                 case username
+            }
+        }
+        /// Annotation creation request
+        ///
+        /// - Remark: Generated from `#/components/schemas/CreateAnnotationRequest`.
+        internal struct CreateAnnotationRequest: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/CreateAnnotationRequest/bookId`.
+            internal var bookId: Swift.Int64
+            /// - Remark: Generated from `#/components/schemas/CreateAnnotationRequest/cfi`.
+            internal var cfi: Swift.String
+            /// - Remark: Generated from `#/components/schemas/CreateAnnotationRequest/chapterTitle`.
+            internal var chapterTitle: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/CreateAnnotationRequest/color`.
+            internal var color: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/CreateAnnotationRequest/note`.
+            internal var note: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/CreateAnnotationRequest/style`.
+            internal var style: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/CreateAnnotationRequest/text`.
+            internal var text: Swift.String
+            /// Creates a new `CreateAnnotationRequest`.
+            ///
+            /// - Parameters:
+            ///   - bookId:
+            ///   - cfi:
+            ///   - chapterTitle:
+            ///   - color:
+            ///   - note:
+            ///   - style:
+            ///   - text:
+            internal init(
+                bookId: Swift.Int64,
+                cfi: Swift.String,
+                chapterTitle: Swift.String? = nil,
+                color: Swift.String? = nil,
+                note: Swift.String? = nil,
+                style: Swift.String? = nil,
+                text: Swift.String
+            ) {
+                self.bookId = bookId
+                self.cfi = cfi
+                self.chapterTitle = chapterTitle
+                self.color = color
+                self.note = note
+                self.style = style
+                self.text = text
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case bookId
+                case cfi
+                case chapterTitle
+                case color
+                case note
+                case style
+                case text
+            }
+        }
+        /// Bookmark creation request
+        ///
+        /// - Remark: Generated from `#/components/schemas/CreateBookMarkRequest`.
+        internal struct CreateBookMarkRequest: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/CreateBookMarkRequest/audiobookBookmark`.
+            internal var audiobookBookmark: Swift.Bool?
+            /// - Remark: Generated from `#/components/schemas/CreateBookMarkRequest/bookId`.
+            internal var bookId: Swift.Int64
+            /// - Remark: Generated from `#/components/schemas/CreateBookMarkRequest/cfi`.
+            internal var cfi: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/CreateBookMarkRequest/pageNumber`.
+            internal var pageNumber: Swift.Int32?
+            /// - Remark: Generated from `#/components/schemas/CreateBookMarkRequest/pdfBookmark`.
+            internal var pdfBookmark: Swift.Bool?
+            /// - Remark: Generated from `#/components/schemas/CreateBookMarkRequest/positionMs`.
+            internal var positionMs: Swift.Int64?
+            /// - Remark: Generated from `#/components/schemas/CreateBookMarkRequest/title`.
+            internal var title: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/CreateBookMarkRequest/trackIndex`.
+            internal var trackIndex: Swift.Int32?
+            /// Creates a new `CreateBookMarkRequest`.
+            ///
+            /// - Parameters:
+            ///   - audiobookBookmark:
+            ///   - bookId:
+            ///   - cfi:
+            ///   - pageNumber:
+            ///   - pdfBookmark:
+            ///   - positionMs:
+            ///   - title:
+            ///   - trackIndex:
+            internal init(
+                audiobookBookmark: Swift.Bool? = nil,
+                bookId: Swift.Int64,
+                cfi: Swift.String? = nil,
+                pageNumber: Swift.Int32? = nil,
+                pdfBookmark: Swift.Bool? = nil,
+                positionMs: Swift.Int64? = nil,
+                title: Swift.String? = nil,
+                trackIndex: Swift.Int32? = nil
+            ) {
+                self.audiobookBookmark = audiobookBookmark
+                self.bookId = bookId
+                self.cfi = cfi
+                self.pageNumber = pageNumber
+                self.pdfBookmark = pdfBookmark
+                self.positionMs = positionMs
+                self.title = title
+                self.trackIndex = trackIndex
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case audiobookBookmark
+                case bookId
+                case cfi
+                case pageNumber
+                case pdfBookmark
+                case positionMs
+                case title
+                case trackIndex
             }
         }
         /// - Remark: Generated from `#/components/schemas/DashboardConfig`.
@@ -2358,6 +2640,86 @@ extension Components {
                 case field
                 case order
                 case visible
+            }
+        }
+        /// Annotation update request
+        ///
+        /// - Remark: Generated from `#/components/schemas/UpdateAnnotationRequest`.
+        internal struct UpdateAnnotationRequest: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/UpdateAnnotationRequest/color`.
+            internal var color: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/UpdateAnnotationRequest/note`.
+            internal var note: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/UpdateAnnotationRequest/style`.
+            internal var style: Swift.String?
+            /// Creates a new `UpdateAnnotationRequest`.
+            ///
+            /// - Parameters:
+            ///   - color:
+            ///   - note:
+            ///   - style:
+            internal init(
+                color: Swift.String? = nil,
+                note: Swift.String? = nil,
+                style: Swift.String? = nil
+            ) {
+                self.color = color
+                self.note = note
+                self.style = style
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case color
+                case note
+                case style
+            }
+        }
+        /// Bookmark update request
+        ///
+        /// - Remark: Generated from `#/components/schemas/UpdateBookMarkRequest`.
+        internal struct UpdateBookMarkRequest: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/UpdateBookMarkRequest/cfi`.
+            internal var cfi: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/UpdateBookMarkRequest/color`.
+            internal var color: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/UpdateBookMarkRequest/notes`.
+            internal var notes: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/UpdateBookMarkRequest/pageNumber`.
+            internal var pageNumber: Swift.Int32?
+            /// - Remark: Generated from `#/components/schemas/UpdateBookMarkRequest/priority`.
+            internal var priority: Swift.Int32?
+            /// - Remark: Generated from `#/components/schemas/UpdateBookMarkRequest/title`.
+            internal var title: Swift.String?
+            /// Creates a new `UpdateBookMarkRequest`.
+            ///
+            /// - Parameters:
+            ///   - cfi:
+            ///   - color:
+            ///   - notes:
+            ///   - pageNumber:
+            ///   - priority:
+            ///   - title:
+            internal init(
+                cfi: Swift.String? = nil,
+                color: Swift.String? = nil,
+                notes: Swift.String? = nil,
+                pageNumber: Swift.Int32? = nil,
+                priority: Swift.Int32? = nil,
+                title: Swift.String? = nil
+            ) {
+                self.cfi = cfi
+                self.color = color
+                self.notes = notes
+                self.pageNumber = pageNumber
+                self.priority = priority
+                self.title = title
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case cfi
+                case color
+                case notes
+                case pageNumber
+                case priority
+                case title
             }
         }
         /// - Remark: Generated from `#/components/schemas/UpdateProgressRequest`.
