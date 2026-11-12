@@ -4,15 +4,16 @@ import GrimmoryAPI
 import Observation
 import SwiftData
 
-/// Where a book file can be downloaded from. `GrimmoryClient` is the real one; tests use a fake.
+/// Signs download requests for a server. `GrimmoryClient` is the real one; tests use a fake.
 public protocol BookFileSource: Sendable {
-    func downloadFile(bookID: Int64, fileID: Int64, progress: @escaping @Sendable (Double) -> Void) async throws -> URL
+    func downloadRequest(bookID: Int64, fileID: Int64) async throws -> URLRequest
 }
 
 extension GrimmoryClient: BookFileSource {}
 
-/// Downloads books for offline reading and reports progress to the UI. State that must survive a relaunch
-/// (`downloadState`, `localRelativePath`) lives on `BookFile`; progress is only in memory.
+/// Downloads books for offline reading through a `FileTransfer` (a background `URLSession` in the app) and reports
+/// progress to the UI. State that must survive a relaunch (`downloadState`, `localRelativePath`) lives on
+/// `BookFile`; progress is only in memory.
 @MainActor
 @Observable
 public final class DownloadCenter {
@@ -23,21 +24,28 @@ public final class DownloadCenter {
 
     private let context: ModelContext
     private let storage: BookStorage
+    private let transfer: any FileTransfer
     private let source: @MainActor (Account) -> (any BookFileSource)?
-    private var tasks: [UUID: Task<Void, Never>] = [:]
 
-    public init(context: ModelContext, storage: BookStorage = .standard,
+    public init(context: ModelContext, storage: BookStorage = .standard, transfer: any FileTransfer,
                 source: @escaping @MainActor (Account) -> (any BookFileSource)?) {
         self.context = context
         self.storage = storage
+        self.transfer = transfer
         self.source = source
-        resetInterruptedDownloads()
+        transfer.setHandler { [weak self] event in
+            Task { @MainActor in self?.handle(event) }
+        }
+        // Taken now, so a download started before the check finishes isn't mistaken for an interrupted one.
+        let downloadingAtLaunch = Self.downloadingFiles(in: context).map(\.id)
+        Task { await reconcile(downloadingAtLaunch) }
     }
 
-    /// Starts downloading `file` unless it's already downloading or downloaded.
+    /// Starts downloading `file` unless it's already downloading or downloaded. The returned task finishes once
+    /// the transfer has started, not when it completes.
     @discardableResult
     public func download(_ file: BookFile) -> Task<Void, Never>? {
-        guard file.downloadState != .downloading, file.downloadState != .downloaded else { return tasks[file.id] }
+        guard file.downloadState != .downloading, file.downloadState != .downloaded else { return nil }
         guard let book = file.book, let bookID = book.remoteID, let fileID = file.remoteFileID,
               let account = book.account, let source = source(account)
         else {
@@ -45,68 +53,96 @@ public final class DownloadCenter {
             return nil
         }
 
-        let fileKey = file.id
-        let bookKey = book.id
-        let format = file.format
+        let id = file.id
         file.downloadState = .downloading
-        failures[fileKey] = nil
-        progress[fileKey] = 0
+        failures[id] = nil
+        progress[id] = 0
         try? context.save()
 
-        // The center lives as long as the app, so holding it strongly here is fine.
-        let task = Task { [storage, self] in
+        return Task {
             do {
-                let temporary = try await source.downloadFile(bookID: bookID, fileID: fileID) { fraction in
-                    Task { @MainActor [self] in
-                        if progress[fileKey] != nil { progress[fileKey] = fraction }
-                    }
-                }
-                let path = try storage.store(downloaded: temporary, bookID: bookKey, format: format)
-                let file = storage.url(forRelativePath: path).path(percentEncoded: false)
-                let size = (try? FileManager.default.attributesOfItem(atPath: file)[.size] as? NSNumber)?.int64Value
-                finish(fileKey) { file in
-                    file.localRelativePath = path
-                    file.sizeBytes = size ?? file.sizeBytes
-                    file.downloadState = .downloaded
-                }
-            } catch is CancellationError {
-                finish(fileKey) { $0.downloadState = .remote }
+                transfer.start(try await source.downloadRequest(bookID: bookID, fileID: fileID), id: id)
             } catch {
-                failures[fileKey] = Self.message(for: error)
-                finish(fileKey) { $0.downloadState = .failed }
+                handle(.failed(id, error))
             }
         }
-        tasks[fileKey] = task
-        return task
     }
 
     public func cancel(_ file: BookFile) {
-        tasks[file.id]?.cancel()
+        transfer.cancel(id: file.id)
     }
 
     /// Deletes the downloaded copy. The book stays in the library and can be downloaded again.
     public func removeDownload(_ file: BookFile) {
-        tasks[file.id]?.cancel()
+        transfer.cancel(id: file.id)
         if let book = file.book { storage.removeFiles(for: book.id) }
         file.localRelativePath = nil
         file.downloadState = .remote
+        progress[file.id] = nil
         try? context.save()
     }
 
-    private func finish(_ fileID: UUID, _ update: (BookFile) -> Void) {
-        tasks[fileID] = nil
-        progress[fileID] = nil
-        let descriptor = FetchDescriptor<BookFile>(predicate: #Predicate { $0.id == fileID })
-        guard let file = try? context.fetch(descriptor).first else { return }
-        update(file)
-        try? context.save()
+    func handle(_ event: TransferEvent) {
+        switch event {
+        case let .progress(id, fraction):
+            if progress[id] != nil { progress[id] = fraction }
+
+        case let .finished(id, temporary, statusCode, mimeType):
+            guard let file = file(id), let book = file.book else {
+                try? FileManager.default.removeItem(at: temporary)
+                return
+            }
+            do {
+                try GrimmoryClient.checkDownload(statusCode: statusCode, mimeType: mimeType)
+                let path = try storage.store(downloaded: temporary, bookID: book.id, format: file.format)
+                let attributes = try? FileManager.default.attributesOfItem(
+                    atPath: storage.url(forRelativePath: path).path(percentEncoded: false))
+                file.localRelativePath = path
+                file.sizeBytes = (attributes?[.size] as? NSNumber)?.int64Value ?? file.sizeBytes
+                file.downloadState = .downloaded
+            } catch {
+                try? FileManager.default.removeItem(at: temporary)
+                failures[id] = Self.message(for: error)
+                file.downloadState = .failed
+            }
+            progress[id] = nil
+            try? context.save()
+
+        case let .failed(id, error):
+            guard let file = file(id) else { return }
+            if error is CancellationError {
+                file.downloadState = .remote
+            } else {
+                failures[id] = Self.message(for: error)
+                file.downloadState = .failed
+            }
+            progress[id] = nil
+            try? context.save()
+        }
     }
 
-    /// A download that was running when the app quit never finished.
-    private func resetInterruptedDownloads() {
+    private func file(_ id: UUID) -> BookFile? {
+        try? context.fetch(FetchDescriptor<BookFile>(predicate: #Predicate { $0.id == id })).first
+    }
+
+    private static func downloadingFiles(in context: ModelContext) -> [BookFile] {
         let downloading = BookFile.DownloadState.downloading.rawValue
         let descriptor = FetchDescriptor<BookFile>(predicate: #Predicate { $0.downloadStateRaw == downloading })
-        for file in (try? context.fetch(descriptor)) ?? [] { file.downloadState = .remote }
+        return (try? context.fetch(descriptor)) ?? []
+    }
+
+    /// Of the files that were downloading when the app launched, those still running in the background session
+    /// keep going; the rest were interrupted (the session was reset, or the app was deleted and restored).
+    private func reconcile(_ downloadingAtLaunch: [UUID]) async {
+        let active = await transfer.activeIDs()
+        for id in downloadingAtLaunch {
+            guard let file = file(id), file.downloadState == .downloading else { continue }
+            if active.contains(id) {
+                progress[id] = progress[id] ?? 0
+            } else {
+                file.downloadState = .remote
+            }
+        }
         try? context.save()
     }
 
@@ -114,7 +150,7 @@ public final class DownloadCenter {
         switch error {
         case GrimmoryError.forbidden: "Your Grimmory account isn't allowed to download books."
         case GrimmoryError.notFound: "The server no longer has this file."
-        case GrimmoryError.signedOut: "You've been signed out of this server."
+        case GrimmoryError.unauthorized, GrimmoryError.signedOut: "You've been signed out of this server."
         case GrimmoryError.webPageInsteadOfAPI: "The server's sign-in proxy needs you to sign in again."
         case let error as URLError where error.code == .notConnectedToInternet: "You're offline."
         default: error.localizedDescription

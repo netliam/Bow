@@ -13,9 +13,9 @@ final class LibrarySync {
 
     private var isPushing = false
 
-    /// Sends reading positions waiting in the outbox. Runs before every catalog pull, so the server's progress
-    /// already includes this device's reading when it comes back.
-    func pushProgress(_ container: ModelContainer) async {
+    /// Sends changes waiting in the outbox (reading positions, read status, ratings). Runs before every catalog
+    /// pull, so what comes back already includes this device's changes.
+    func pushChanges(_ container: ModelContainer) async {
         guard !isPushing else { return }
         isPushing = true
         defer { isPushing = false }
@@ -25,7 +25,7 @@ final class LibrarySync {
             clients[account.id] = GrimmoryAccounts.client(for: account)
         }
         let destinations = clients
-        _ = await ProgressPusher(modelContainer: container).pushPending(to: { destinations[$0] })
+        _ = await OutboxPusher(modelContainer: container).pushPending(to: { destinations[$0] })
     }
 
     func syncAll(_ container: ModelContainer) async {
@@ -33,7 +33,7 @@ final class LibrarySync {
         isSyncing = true
         defer { isSyncing = false }
 
-        await pushProgress(container)
+        await pushChanges(container)
         let accounts = (try? container.mainContext.fetch(FetchDescriptor<Account>())) ?? []
         for account in accounts {
             guard let client = GrimmoryAccounts.client(for: account) else { continue }

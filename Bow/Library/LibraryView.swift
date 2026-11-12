@@ -4,23 +4,22 @@ import SwiftData
 import SwiftUI
 
 /// Every book, or one account's, as a grid of covers. Reads only from SwiftData, so it works offline.
-/// Tapping a book opens it, downloading it first if needed.
+/// Tapping a book opens its detail page; EPUB files dropped on the grid are imported.
 struct LibraryView: View {
     let accountID: UUID?
     @Binding var isAddingServer: Bool
+    @Binding var isImporting: Bool
 
     @Environment(\.modelContext) private var modelContext
     @Environment(LibrarySync.self) private var librarySync
     @Environment(DownloadCenter.self) private var downloads
+    @Environment(LocalImporter.self) private var importer
     @Query private var books: [Book]
-    @State private var openBook: Book?
-    /// Opened as soon as its download finishes, if the reader tapped it to read.
-    @State private var openWhenDownloaded: UUID?
-    @State private var unsupportedBook: Book?
 
-    init(accountID: UUID?, isAddingServer: Binding<Bool>) {
+    init(accountID: UUID?, isAddingServer: Binding<Bool>, isImporting: Binding<Bool>) {
         self.accountID = accountID
         self._isAddingServer = isAddingServer
+        self._isImporting = isImporting
         let filter: Predicate<Book>
         if let accountID {
             filter = #Predicate { !$0.isRemovedOnServer && $0.account?.id == accountID }
@@ -38,7 +37,7 @@ struct LibraryView: View {
                 ScrollView {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 120, maximum: 180), spacing: 20)], spacing: 24) {
                         ForEach(books) { book in
-                            Button { open(book) } label: { BookTile(book: book) }
+                            NavigationLink(value: book) { BookTile(book: book) }
                                 .buttonStyle(.plain)
                                 .contextMenu { downloadMenu(for: book) }
                         }
@@ -47,62 +46,30 @@ struct LibraryView: View {
                 }
             }
         }
+        .navigationDestination(for: Book.self) { BookDetailView(book: $0) }
         .refreshable { await librarySync.syncAll(modelContext.container) }
+        .dropDestination(for: URL.self) { urls, _ in
+            let books = urls.filter { $0.pathExtension.lowercased() == "epub" }
+            importer.importFiles(books)
+            return !books.isEmpty
+        }
         .overlay(alignment: .bottom) {
-            if let problem = librarySync.problem {
+            if let problem = librarySync.problem ?? importer.problem {
                 Text(problem)
                     .font(.footnote)
                     .padding(12)
                     .background(.regularMaterial, in: .rect(cornerRadius: 10))
                     .padding()
+                    .onTapGesture {
+                        librarySync.problem = nil
+                        importer.problem = nil
+                    }
             }
-        }
-        .fullScreenCover(item: $openBook) { book in
-            ReaderScreen(book: book)
-        }
-        .alert("Bow can't read this book yet", isPresented: .init(
-            get: { unsupportedBook != nil }, set: { if !$0 { unsupportedBook = nil } }
-        )) {
-            Button("OK") {}
-        } message: {
-            Text("Bow opens EPUB books for now. PDF and comic support are coming.")
-        }
-        .onChange(of: downloadedIDs) {
-            guard let id = openWhenDownloaded, let book = books.first(where: { $0.id == id }),
-                  epubFile(of: book)?.downloadState == .downloaded
-            else { return }
-            openWhenDownloaded = nil
-            openBook = book
-        }
-    }
-
-    /// Changes whenever a download finishes, to open a book the reader was waiting for.
-    private var downloadedIDs: [UUID] {
-        books.compactMap { epubFile(of: $0)?.downloadState == .downloaded ? $0.id : nil }
-    }
-
-    private func epubFile(of book: Book) -> BookFile? {
-        book.files.first { $0.format == .epub }
-    }
-
-    private func open(_ book: Book) {
-        guard let file = epubFile(of: book) else {
-            unsupportedBook = book
-            return
-        }
-        switch file.downloadState {
-        case .downloaded:
-            openBook = book
-        case .downloading:
-            openWhenDownloaded = book.id
-        case .remote, .failed:
-            openWhenDownloaded = book.id
-            downloads.download(file)
         }
     }
 
     @ViewBuilder private func downloadMenu(for book: Book) -> some View {
-        if let file = epubFile(of: book) {
+        if let file = book.files.first(where: { $0.format == .epub }), book.account?.kind != .local {
             switch file.downloadState {
             case .downloaded:
                 Button("Remove Download", systemImage: "trash") { downloads.removeDownload(file) }
@@ -124,10 +91,11 @@ struct LibraryView: View {
             ContentUnavailableView {
                 Label("No Books Yet", systemImage: "books.vertical")
             } description: {
-                Text("Connect a Grimmory server to see your library here.")
+                Text("Connect a Grimmory server, or add EPUB books from Files.")
             } actions: {
                 Button("Add Grimmory Server") { isAddingServer = true }
                     .buttonStyle(.borderedProminent)
+                Button("Add Books from Files") { isImporting = true }
             }
         }
     }
@@ -163,7 +131,7 @@ private struct BookTile: View {
     private var file: BookFile? { book.files.first { $0.format == .epub } }
 
     @ViewBuilder private var downloadBadge: some View {
-        if let file {
+        if let file, book.account?.kind != .local {
             switch file.downloadState {
             case .downloading:
                 ProgressView(value: downloads.progress[file.id] ?? 0)
@@ -189,9 +157,9 @@ private struct BookTile: View {
 
     private var accessibilityHint: String {
         switch file?.downloadState {
-        case .downloaded: "Opens the book."
+        case .downloaded: "Shows the book. It's available offline."
         case .downloading: "Downloading."
-        case .remote, .failed: "Downloads and opens the book."
+        case .remote, .failed: "Shows the book."
         case nil: "Bow can't open this format yet."
         }
     }

@@ -14,8 +14,6 @@ public final class GrimmoryClient: Sendable {
     let transport: any ClientTransport
     /// Fetches non-Grimmory URLs (the identity provider's OIDC discovery document).
     let loadURL: URLLoader
-    /// Streams book files to disk (`downloadFile`).
-    let downloader: FileDownloader
 
     /// - Parameter serverURL: The server root, e.g. `https://books.example.com` (no `/api`).
     public init(
@@ -23,12 +21,10 @@ public final class GrimmoryClient: Sendable {
         tokenStore: any GrimmoryTokenStore,
         transport: any ClientTransport = URLSessionTransport(),
         loadURL: @escaping URLLoader = GrimmoryClient.loadOverHTTP,
-        downloader: @escaping FileDownloader = GrimmoryClient.urlSessionDownloader,
         now: @escaping @Sendable () -> Date = Date.init
     ) {
         self.serverURL = serverURL
         self.loadURL = loadURL
-        self.downloader = downloader
         self.transport = transport
         let configuration = Configuration(dateTranscoder: GrimmoryDateTranscoder())
 

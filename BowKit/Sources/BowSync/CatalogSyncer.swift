@@ -35,6 +35,9 @@ public actor CatalogSyncer {
             if let remoteID = book.remoteID { existing[remoteID] = book }
         }
 
+        let pendingStatus = BookOutbox.pendingBookIDs(.readStatus, in: modelContext)
+        let pendingRating = BookOutbox.pendingBookIDs(.rating, in: modelContext)
+
         var result = CatalogSyncResult()
         var page = 0
         while true {
@@ -47,12 +50,13 @@ public actor CatalogSyncer {
                         result.unchanged += 1
                         continue
                     }
-                    apply(summary, hash: hash, to: book)
+                    apply(summary, hash: hash, to: book,
+                          keepStatus: pendingStatus.contains(book.id), keepRating: pendingRating.contains(book.id))
                     result.updated += 1
                 } else {
                     let book = Book(account: account, remoteID: summary.id, title: summary.title)
                     modelContext.insert(book)
-                    apply(summary, hash: hash, to: book)
+                    apply(summary, hash: hash, to: book, keepStatus: false, keepRating: false)
                     existing[summary.id] = book
                     result.inserted += 1
                 }
@@ -71,14 +75,16 @@ public actor CatalogSyncer {
         return result
     }
 
-    private func apply(_ summary: GrimmoryBookSummary, hash: String, to book: Book) {
+    /// `keepStatus` / `keepRating`: this device changed the field and hasn't sent it yet, so the server's older
+    /// value must not overwrite it.
+    private func apply(_ summary: GrimmoryBookSummary, hash: String, to book: Book, keepStatus: Bool, keepRating: Bool) {
         book.title = summary.title
         book.authors = summary.authors
         book.seriesName = summary.seriesName
         book.seriesNumber = summary.seriesNumber
         book.addedOn = summary.addedOn
-        book.readStatus = summary.readStatus
-        book.rating = summary.personalRating
+        if !keepStatus { book.readStatus = summary.readStatus }
+        if !keepRating { book.rating = summary.personalRating }
         book.coverUpdatedOn = summary.coverUpdatedOn
         book.summaryHash = hash
 

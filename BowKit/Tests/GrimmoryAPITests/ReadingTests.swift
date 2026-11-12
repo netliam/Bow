@@ -1,76 +1,52 @@
 import Foundation
-import Synchronization
 import Testing
 @testable import GrimmoryAPI
 
-/// Records download requests and answers them with scripted responses.
-private final class FakeDownloader: Sendable {
-    let requests = Mutex<[URLRequest]>([])
-    let respond: @Sendable (URLRequest) -> (status: Int, mime: String, body: String)
-
-    init(respond: @escaping @Sendable (URLRequest) -> (status: Int, mime: String, body: String)) {
-        self.respond = respond
-    }
-
-    var downloader: GrimmoryClient.FileDownloader {
-        { [self] request, progress in
-            requests.withLock { $0.append(request) }
-            let (status, mime, body) = respond(request)
-            let file = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
-            try Data(body.utf8).write(to: file)
-            progress(1)
-            let response = HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil,
-                                           headerFields: ["Content-Type": mime])!
-            return (file, response)
-        }
-    }
-}
-
 @Suite struct ReadingTests {
-    @Test func downloadsWithTheBearerToken() async throws {
-        let fake = FakeDownloader { _ in (200, "application/epub+zip", "EPUB BYTES") }
+    @Test func downloadRequestsAreSigned() async throws {
         let client = GrimmoryClient(serverURL: Fixtures.server, tokenStore: InMemoryTokenStore(Fixtures.tokens()),
-                                    transport: FakeGrimmory(), downloader: fake.downloader)
+                                    transport: FakeGrimmory())
 
-        let file = try await client.downloadFile(bookID: 5, fileID: 50)
+        let request = try await client.downloadRequest(bookID: 5, fileID: 50)
 
-        #expect(try String(contentsOf: file, encoding: .utf8) == "EPUB BYTES")
-        let request = try #require(fake.requests.withLock { $0.first })
         #expect(request.url?.absoluteString == "https://books.example.com/api/v1/books/5/files/50/download")
         #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer A1")
     }
 
-    @Test func downloadRefreshesOnceOn401() async throws {
-        let fake = FakeDownloader { request in
-            request.value(forHTTPHeaderField: "Authorization") == "Bearer A2"
-                ? (200, "application/epub+zip", "EPUB") : (401, "application/json", "{}")
-        }
+    @Test func downloadRequestRefreshesAnExpiringToken() async throws {
         let server = FakeGrimmory { request in
             request.path == "/api/v1/auth/refresh" ? (200, Fixtures.tokenJSON(access: "A2", refresh: "R2")) : (404, "{}")
         }
-        let client = GrimmoryClient(serverURL: Fixtures.server, tokenStore: InMemoryTokenStore(Fixtures.tokens()),
-                                    transport: server, downloader: fake.downloader)
+        let client = GrimmoryClient(serverURL: Fixtures.server,
+                                    tokenStore: InMemoryTokenStore(Fixtures.tokens(expiresIn: 5)), transport: server)
 
-        _ = try await client.downloadFile(bookID: 5, fileID: 50)
+        let request = try await client.downloadRequest(bookID: 5, fileID: 50)
 
-        #expect(fake.requests.withLock { $0.count } == 2)
-        #expect(await server.count(path: "/api/v1/auth/refresh") == 1)
+        #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer A2")
     }
 
-    @Test func downloadWithoutPermissionIsForbidden() async throws {
-        let fake = FakeDownloader { _ in (403, "application/json", "{}") }
-        let client = GrimmoryClient(serverURL: Fixtures.server, tokenStore: InMemoryTokenStore(Fixtures.tokens()),
-                                    transport: FakeGrimmory(), downloader: fake.downloader)
-
-        await #expect(throws: GrimmoryError.forbidden) { try await client.downloadFile(bookID: 5, fileID: 50) }
+    @Test func checksFinishedDownloads() throws {
+        try GrimmoryClient.checkDownload(statusCode: 200, mimeType: "application/epub+zip")
+        #expect(throws: GrimmoryError.forbidden) { try GrimmoryClient.checkDownload(statusCode: 403, mimeType: nil) }
+        #expect(throws: GrimmoryError.webPageInsteadOfAPI) {
+            try GrimmoryClient.checkDownload(statusCode: 200, mimeType: "text/html")
+        }
     }
 
-    @Test func proxyPageInsteadOfTheFile() async throws {
-        let fake = FakeDownloader { _ in (200, "text/html", "<html>Sign in</html>") }
+    @Test func sendsStatusAndRating() async throws {
+        let server = FakeGrimmory { _ in (200, "") }
         let client = GrimmoryClient(serverURL: Fixtures.server, tokenStore: InMemoryTokenStore(Fixtures.tokens()),
-                                    transport: FakeGrimmory(), downloader: fake.downloader)
+                                    transport: server)
 
-        await #expect(throws: GrimmoryError.webPageInsteadOfAPI) { try await client.downloadFile(bookID: 5, fileID: 50) }
+        try await client.updateReadStatus(bookID: 5, status: .reReading)
+        try await client.updateRating(bookID: 5, rating: 9)
+
+        let requests = await server.requests
+        #expect(requests.map(\.path) == ["/api/v1/app/books/5/status", "/api/v1/app/books/5/rating"])
+        let status = try JSONSerialization.jsonObject(with: Data((requests[0].body ?? "").utf8)) as? [String: Any]
+        #expect(status?["status"] as? String == "RE_READING")
+        let rating = try JSONSerialization.jsonObject(with: Data((requests[1].body ?? "").utf8)) as? [String: Any]
+        #expect(rating?["rating"] as? Int == 5)  // Clamped to Grimmory's 1–5.
     }
 
     @Test func sendsProgressAsAFileProgress() async throws {

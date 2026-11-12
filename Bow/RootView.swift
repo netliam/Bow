@@ -1,17 +1,21 @@
+import BowLibrary
 import BowModel
 import BowSync
 import GrimmoryAPI
 import SwiftData
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Sidebar of libraries (collapses to a stack on iPhone) and the selected library's books.
 struct RootView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(LibrarySync.self) private var librarySync
+    @Environment(LocalImporter.self) private var importer
     @Query(sort: \Account.createdAt) private var accounts: [Account]
 
     @State private var selection: LibrarySelection? = .all
     @State private var isAddingServer = false
+    @State private var isImporting = false
     @State private var accountToRemove: Account?
 
     var body: some View {
@@ -19,6 +23,11 @@ struct RootView: View {
             List(selection: $selection) {
                 Label("All Books", systemImage: "books.vertical")
                     .tag(LibrarySelection.all)
+
+                if let local = accounts.first(where: { $0.kind == .local }) {
+                    Label(local.displayName, systemImage: "ipad.and.iphone")
+                        .tag(LibrarySelection.account(local.id))
+                }
 
                 if !grimmoryAccounts.isEmpty {
                     Section("Servers") {
@@ -34,14 +43,20 @@ struct RootView: View {
             }
             .navigationTitle("Bow")
             .toolbar {
-                Button("Add Grimmory Server", systemImage: "plus") { isAddingServer = true }
+                Menu("Add", systemImage: "plus") {
+                    Button("Add Grimmory Server", systemImage: "server.rack") { isAddingServer = true }
+                    Button("Add Books from Files", systemImage: "doc.badge.plus") { isImporting = true }
+                }
             }
         } detail: {
             NavigationStack {
-                LibraryView(accountID: selection?.accountID, isAddingServer: $isAddingServer)
+                LibraryView(accountID: selection?.accountID, isAddingServer: $isAddingServer, isImporting: $isImporting)
                     .id(selection)
                     .navigationTitle(title)
             }
+        }
+        .fileImporter(isPresented: $isImporting, allowedContentTypes: [.epub], allowsMultipleSelection: true) { result in
+            if case .success(let urls) = result { importer.importFiles(urls) }
         }
         .sheet(isPresented: $isAddingServer) {
             AddServerView { accountID in
@@ -74,6 +89,7 @@ struct RootView: View {
         }
         GrimmoryAccounts.forget(accountID: account.id)
         if selection?.accountID == account.id { selection = .all }
+        for book in account.books { BookStorage.standard.removeFiles(for: book.id) }  // Downloads go too.
         modelContext.delete(account)
         try? modelContext.save()
     }

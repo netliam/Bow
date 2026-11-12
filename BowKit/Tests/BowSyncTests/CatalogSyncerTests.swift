@@ -92,6 +92,31 @@ private func summary(_ id: Int64, _ title: String, type: String = "EPUB", progre
         #expect(try !(#require(try books().first { $0.remoteID == 2 })).isRemovedOnServer)
     }
 
+    @Test func unsentLocalStatusAndRatingSurviveASync() async throws {
+        let catalog = FakeCatalog([summary(1, "Dune")])
+        let syncer = CatalogSyncer(modelContainer: container)
+        _ = try await syncer.sync(accountID: accountID, from: catalog)
+
+        // Marked read with 5 stars on this device; not sent yet.
+        let dune = try #require(try books().first)
+        dune.readStatus = "READ"
+        dune.rating = 5
+        BookOutbox.enqueue(.readStatus, bookID: dune.id, in: container.mainContext)
+        BookOutbox.enqueue(.rating, bookID: dune.id, in: container.mainContext)
+        try container.mainContext.save()
+
+        // The server still says unread, and something else about the book changed.
+        var changed = summary(1, "Dune (Revised)")
+        changed.personalRating = 2
+        await catalog.set([changed])
+        _ = try await syncer.sync(accountID: accountID, from: catalog)
+
+        let synced = try #require(try books().first)
+        #expect(synced.title == "Dune (Revised)")
+        #expect(synced.readStatus == "READ")
+        #expect(synced.rating == 5)
+    }
+
     @Test func mapsFileTypes() {
         #expect(CatalogSyncer.format("EPUB") == .epub)
         #expect(CatalogSyncer.format("pdf") == .pdf)

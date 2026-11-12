@@ -1,3 +1,4 @@
+import BowLibrary
 import BowModel
 import BowSync
 import GrimmoryAPI
@@ -23,8 +24,13 @@ struct CoverView: View {
         .clipShape(.rect(cornerRadius: 4))
         .shadow(color: .black.opacity(0.15), radius: 3, y: 2)
         .task(id: CoverRequest(book)) {
-            guard let request = CoverRequest(book) else { return }
-            image = await CoverCache.shared.image(for: request)
+            if let request = CoverRequest(book) {
+                image = await CoverCache.shared.image(for: request)
+            } else {
+                // Imported books keep their cover next to the file (`LocalImporter`).
+                let cover = BookStorage.standard.directory(for: book.id).appending(path: "cover")
+                image = UIImage(contentsOfFile: cover.path(percentEncoded: false))
+            }
         }
     }
 
