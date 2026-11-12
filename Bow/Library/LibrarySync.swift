@@ -13,8 +13,8 @@ final class LibrarySync {
 
     private var isPushing = false
 
-    /// Sends changes waiting in the outbox (reading positions, read status, ratings). Runs before every catalog
-    /// pull, so what comes back already includes this device's changes.
+    /// Sends changes waiting in the outbox (reading positions, read status, ratings, annotations). Runs before
+    /// every catalog pull, so what comes back already includes this device's changes.
     func pushChanges(_ container: ModelContainer) async {
         guard !isPushing else { return }
         isPushing = true
@@ -26,6 +26,8 @@ final class LibrarySync {
         }
         let destinations = clients
         _ = await OutboxPusher(modelContainer: container).pushPending(to: { destinations[$0] })
+        // In the main context, where the reader edits them (see `AnnotationSyncer`).
+        _ = await AnnotationSyncer(context: container.mainContext).pushPending(to: { destinations[$0] })
     }
 
     func syncAll(_ container: ModelContainer) async {

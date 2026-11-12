@@ -34,3 +34,12 @@ filter:
     - updateBookProgress
     - appUpdateStatus
     - appUpdateRating
+    # Annotations and bookmarks
+    - getAnnotationsForBook
+    - createAnnotation
+    - updateAnnotation
+    - deleteAnnotation
+    - getBookmarksForBook
+    - createBookmark
+    - updateBookmark
+    - deleteBookmark

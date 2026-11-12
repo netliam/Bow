@@ -81,6 +81,12 @@ def main():
     progress = spec["components"]["schemas"].get("UpdateProgressRequest", {})
     progress.get("properties", {}).pop("progressValid", None)
 
+    # Annotations and bookmarks are JPA entities with `LocalDateTime` stamps: no time zone and microseconds
+    # ("2026-11-12T16:24:30.857306"), which a `date-time` decoder rejects. Keep them as strings.
+    for name in ("Annotation", "BookMark"):
+        for field in ("createdAt", "updatedAt"):
+            spec["components"]["schemas"][name]["properties"][field].pop("format", None)
+
     OUTPUT.write_text(json.dumps(spec, indent=2, sort_keys=True) + "\n")
     print(f"wrote {OUTPUT.relative_to(ROOT)} (spec {spec['info']['version']})")
 

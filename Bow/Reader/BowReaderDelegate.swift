@@ -13,19 +13,24 @@ final class BowReaderDelegate: DCReaderCoordsProtocol {
     private let bookID: UUID
     private let epub: DCEpubBook
     private let converter: DCCFIConverter
-    /// Called after a position is saved and queued for the server.
-    private let onProgressQueued: () -> Void
+    /// Annotations get their own: a converter holds one chapter at a time, and a position and a highlight
+    /// converting at once could each load the other's chapter.
+    private let annotationConverter: DCCFIConverter
+    private var annotationConversion: Task<String?, Never>?
+    /// Called after a change (position, annotation) is saved and queued for the server.
+    private let onChangeQueued: () -> Void
     private var cfiTask: Task<Void, Never>?
 
     /// Converting to a CFI loads the chapter off screen, so wait for the reader to settle on a page first.
     static let cfiDelay: Duration = .seconds(2)
 
-    init(context: ModelContext, bookID: UUID, epub: DCEpubBook, onProgressQueued: @escaping () -> Void) {
+    init(context: ModelContext, bookID: UUID, epub: DCEpubBook, onChangeQueued: @escaping () -> Void) {
         self.context = context
         self.bookID = bookID
         self.epub = epub
         self.converter = DCCFIConverter(book: epub)
-        self.onProgressQueued = onProgressQueued
+        self.annotationConverter = DCCFIConverter(book: epub)
+        self.onChangeQueued = onChangeQueued
     }
 
     private var book: Book? {
@@ -61,7 +66,7 @@ final class BowReaderDelegate: DCReaderCoordsProtocol {
             }
             BookOutbox.enqueue(.progress, bookID: bookID, in: context)
             try? context.save()
-            onProgressQueued()
+            onChangeQueued()
         }
     }
 
@@ -86,7 +91,11 @@ final class BowReaderDelegate: DCReaderCoordsProtocol {
 
     func save(highlight: DCHighlight) async {
         guard let book, let id = UUID(uuidString: highlight.uuid) else { return }
-        let annotation = book.annotations.first { $0.id == id } ?? {
+        let existing = book.annotations.first { $0.id == id }
+        // Grimmory places annotations by CFI. Only a new or moved one needs converting; edits keep theirs.
+        let needsCFI = existing?.cfi == nil || existing?.kitCoords != highlight.coords
+            || existing?.spineIndex != highlight.spineIndex
+        let annotation = existing ?? {
             let annotation = Annotation(id: id, book: book, kind: GrimmoryHighlights.kind(highlight.type), text: highlight.text)
             annotation.createdAt = Date(timeIntervalSince1970: highlight.dateCreated)
             context.insert(annotation)
@@ -101,24 +110,40 @@ final class BowReaderDelegate: DCReaderCoordsProtocol {
         annotation.style = highlight.annotationStyle.rawValue
         annotation.colorHex = highlight.color.uppercased()
         annotation.updatedAt = Date()
-        annotation.deletedAt = nil
         try? context.save()
+
+        if needsCFI {
+            annotation.cfi = await annotationCFI(coords: highlight.coords, spineIndex: highlight.spineIndex)
+        }
+        AnnotationOutbox.changed(annotation, in: context)
+        try? context.save()
+        onChangeQueued()
+    }
+
+    /// One conversion at a time, in order.
+    private func annotationCFI(coords: String, spineIndex: Int) async -> String? {
+        let previous = annotationConversion
+        let converter = annotationConverter
+        let task = Task<String?, Never> {
+            _ = await previous?.value
+            return await converter.cfi(fromCoords: coords, spineIndex: spineIndex)
+        }
+        annotationConversion = task
+        return await task.value
     }
 
     func deleteHighlight(uuid: String, book _: DCEpubBook) async {
         guard let id = UUID(uuidString: uuid), let annotation = book?.annotations.first(where: { $0.id == id }) else {
             return
         }
-        if annotation.remoteID == nil {
-            context.delete(annotation)  // Never reached the server: nothing to tell it.
-        } else {
-            annotation.deletedAt = Date()  // Tombstone, so the delete can sync.
-        }
+        AnnotationOutbox.deleted(annotation, in: context)
         try? context.save()
+        onChangeQueued()
     }
 
     func highlights(for _: DCEpubBook) async -> [DCHighlight]? {
-        (book?.annotations ?? []).filter { $0.deletedAt == nil }.map(kitHighlight)
+        // Annotations from the server whose CFI couldn't be placed in this edition have no coords to draw.
+        (book?.annotations ?? []).filter { $0.deletedAt == nil && $0.kitCoords != nil }.map(kitHighlight)
     }
 
     func highlights(for _: DCEpubBook, chapterId: String) async -> [DCHighlight]? {
