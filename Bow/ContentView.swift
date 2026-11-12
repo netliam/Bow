@@ -1,5 +1,5 @@
 import SwiftUI
-import Playgrounds
+import DCEpubReaderKit
 
 struct ContentView: View {
     var body: some View {
@@ -12,6 +12,10 @@ struct ContentView: View {
     ContentView()
 }
 
+#if canImport(Playgrounds)
+import Playgrounds
+
 #Playground {
     _ = 1 + 2
 }
+#endif
