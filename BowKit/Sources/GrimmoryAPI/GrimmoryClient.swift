@@ -1,6 +1,7 @@
 import Foundation
 import OpenAPIRuntime
 import OpenAPIURLSession
+import HTTPTypes
 
 /// Bow's entry point to one Grimmory account. Wraps the generated client (internal) and maps its loosely typed
 /// DTOs (everything optional, as Spring's spec declares them) into Bow's domain types.
@@ -10,6 +11,7 @@ public final class GrimmoryClient: Sendable {
     public let serverURL: URL
     let client: Client
     let session: GrimmorySession
+    let transport: any ClientTransport
     /// Fetches non-Grimmory URLs (the identity provider's OIDC discovery document).
     let loadURL: URLLoader
 
@@ -23,6 +25,7 @@ public final class GrimmoryClient: Sendable {
     ) {
         self.serverURL = serverURL
         self.loadURL = loadURL
+        self.transport = transport
         let configuration = Configuration(dateTranscoder: GrimmoryDateTranscoder())
 
         // Refreshing goes through a client without the auth middleware, so it can't recurse into itself.
@@ -50,12 +53,12 @@ public final class GrimmoryClient: Sendable {
         let settings = try ok.body.json
 
         var version: String?
-        if case .ok(let versionOK) = try await unwrapped { try await client.getVersionInfo() } {
+        if case .ok(let versionOK) = try await unwrapped({ try await client.getVersionInfo() }) {
             version = try versionOK.body.json.current
         }
 
         var needsSetup = false
-        if case .ok(let setupOK) = try await unwrapped { try await client.getSetupStatus() } {
+        if case .ok(let setupOK) = try await unwrapped({ try await client.getSetupStatus() }) {
             needsSetup = try setupOK.body.json.data == false
         }
 
@@ -190,6 +193,29 @@ public final class GrimmoryClient: Sendable {
         return try ok.body.json
     }
 
+    // MARK: Media
+
+    /// The book's cover thumbnail (JPEG). Grimmory changes `coverUpdatedOn` whenever it changes, so cache by that.
+    public func thumbnail(bookID: Int64) async throws -> Data {
+        try await authorizedData(path: "/api/v1/media/book/\(bookID)/thumbnail", operationID: "getBookThumbnail")
+    }
+
+    /// A GET for binary endpoints the generated client doesn't cover. Goes through the same `AuthMiddleware`, so it
+    /// gets the bearer token, the single-flight refresh on 401, and proxy-page detection.
+    func authorizedData(path: String, operationID: String) async throws -> Data {
+        var request = HTTPRequest(method: .get, scheme: nil, authority: nil, path: path)
+        request.headerFields[.accept] = "*/*"
+        let middleware = AuthMiddleware(session: session)
+        let (response, body) = try await middleware.intercept(
+            request, body: nil, baseURL: serverURL, operationID: operationID
+        ) { [transport] request, body, baseURL in
+            try await transport.send(request, body: body, baseURL: baseURL, operationID: operationID)
+        }
+        guard response.status == .ok else { throw GrimmoryError(status: response.status.code) }
+        guard let body else { return Data() }
+        return try await Data(collecting: body, upTo: 50 * 1024 * 1024)
+    }
+
     // MARK: Mapping
 
     /// The default `loadURL`: a plain GET that fails on non-2xx.
@@ -232,12 +258,13 @@ public final class GrimmoryClient: Sendable {
 }
 
 /// Runs a generated call, unwrapping the `ClientError` OpenAPIRuntime wraps around everything thrown inside it,
-/// so callers see `GrimmoryError.signedOut` (and others) as themselves.
+/// so callers see the real error: `GrimmoryError.signedOut` from the middleware, `URLError` from the network,
+/// `DecodingError` from a malformed response.
 func unwrapped<T>(_ call: () async throws -> T) async throws -> T {
     do {
         return try await call()
     } catch let error as ClientError {
-        throw (error.underlyingError as? GrimmoryError) ?? error
+        throw error.underlyingError
     }
 }
 

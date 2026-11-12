@@ -180,6 +180,13 @@ import Testing
         #expect(dune.coverUpdatedOn == (try Date("2026-11-02T08:00:00Z", strategy: .iso8601)))
     }
 
+    @Test func networkErrorsArriveUnwrapped() async throws {
+        let server = FakeGrimmory { _ in throw URLError(.cannotConnectToHost) }
+        let client = GrimmoryClient(serverURL: Fixtures.server, tokenStore: InMemoryTokenStore(), transport: server)
+
+        await #expect(throws: URLError(.cannotConnectToHost)) { try await client.serverInfo() }
+    }
+
     @Test func forbiddenIsReported() async throws {
         let server = FakeGrimmory { _ in (403, "{}") }
         let client = GrimmoryClient(serverURL: Fixtures.server, tokenStore: InMemoryTokenStore(Fixtures.tokens()),

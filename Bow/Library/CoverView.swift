@@ -1,0 +1,97 @@
+import BowModel
+import BowSync
+import GrimmoryAPI
+import SwiftUI
+import UIKit
+
+/// A book cover, loaded from the server once and kept on disk. Falls back to a title card.
+struct CoverView: View {
+    let book: Book
+    @State private var image: UIImage?
+
+    var body: some View {
+        ZStack {
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                placeholder
+            }
+        }
+        .aspectRatio(2 / 3, contentMode: .fit)
+        .clipShape(.rect(cornerRadius: 4))
+        .shadow(color: .black.opacity(0.15), radius: 3, y: 2)
+        .task(id: CoverRequest(book)) {
+            guard let request = CoverRequest(book) else { return }
+            image = await CoverCache.shared.image(for: request)
+        }
+    }
+
+    private var placeholder: some View {
+        ZStack {
+            Rectangle().fill(.quaternary)
+            Text(book.title)
+                .font(.caption.weight(.semibold))
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.secondary)
+                .padding(8)
+        }
+    }
+}
+
+/// What the cover cache needs from a `Book`, copied out on the main actor so the SwiftData object never leaves it.
+struct CoverRequest: Hashable, Sendable {
+    let key: String
+    let remoteID: Int64
+    let accountID: UUID
+    let serverURL: URL
+
+    init?(_ book: Book) {
+        guard let remoteID = book.remoteID, let account = book.account, let serverURL = account.serverURL else {
+            return nil
+        }
+        self.key = "\(book.id.uuidString)-\(Int(book.coverUpdatedOn?.timeIntervalSince1970 ?? 0))"
+        self.remoteID = remoteID
+        self.accountID = account.id
+        self.serverURL = serverURL
+    }
+}
+
+/// Disk cache for cover thumbnails, keyed by book and `coverUpdatedOn` so a changed cover is fetched again.
+actor CoverCache {
+    static let shared = CoverCache()
+
+    private let directory: URL = {
+        let url = URL.cachesDirectory.appending(path: "Covers", directoryHint: .isDirectory)
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }()
+    private var memory: [String: UIImage] = [:]
+    /// Downloads in progress, so two views showing the same cover share one request.
+    private var inFlight: [String: Task<UIImage?, Never>] = [:]
+
+    func image(for request: CoverRequest) async -> UIImage? {
+        if let image = memory[request.key] { return image }
+
+        let file = directory.appending(path: request.key + ".jpg")
+        if let data = try? Data(contentsOf: file), let image = UIImage(data: data) {
+            memory[request.key] = image
+            return image
+        }
+
+        if let task = inFlight[request.key] { return await task.value }
+        let task = Task<UIImage?, Never> {
+            let client = GrimmoryAccounts.client(serverURL: request.serverURL, accountID: request.accountID)
+            guard let data = try? await client.thumbnail(bookID: request.remoteID), let image = UIImage(data: data)
+            else { return nil }
+            try? data.write(to: file, options: .atomic)
+            return image
+        }
+        inFlight[request.key] = task
+        let image = await task.value
+        inFlight[request.key] = nil
+        memory[request.key] = image
+        return image
+    }
+}
