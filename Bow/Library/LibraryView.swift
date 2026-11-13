@@ -315,24 +315,22 @@ private struct BookTile: View {
         VStack(alignment: .leading, spacing: 6) {
             CoverView(book: book)
                 .overlay(alignment: .bottomTrailing) { downloadBadge.padding(6) }
-            if let fraction = book.progress?.fraction, fraction > 0 {
-                HStack(spacing: 5) {
-                    ProgressRing(fraction: fraction, lineWidth: 2)
-                        .frame(width: 13, height: 13)
-                    Text("\(Int((min(fraction, 1) * 100).rounded()))%")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.secondary)
-                }
-                .accessibilityElement(children: .combine)
-            }
             if showsSeriesNumber, let number = book.seriesNumber {
                 Text("Book \(number.formatted())")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
             }
-            Text(book.title)
-                .font(.subheadline.weight(.medium))
-                .lineLimit(2)
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(book.title)
+                    .font(.subheadline.weight(.medium))
+                    .lineLimit(2)
+                Spacer(minLength: 0)
+                if let fraction = book.progress?.fraction, fraction > 0 {
+                    ProgressRing(fraction: fraction, lineWidth: 2)
+                        .frame(width: 14, height: 14)
+                        .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 4 }
+                }
+            }
             if let author = book.authors.first {
                 Text(author)
                     .font(.caption)
