@@ -9,8 +9,11 @@ private actor FakeDestination: BookStateDestination {
     struct Sent: Equatable { var bookID: Int64; var fileID: Int64; var cfi: String?; var percentage: Double }
     private(set) var sent: [Sent] = []
     var error: (any Error)?
+    /// Runs during the next rating send, as if the user changed something while it was on its way.
+    private var duringSend: (@MainActor () -> Void)?
 
     func fail(with error: (any Error)?) { self.error = error }
+    func onNextSend(_ action: @escaping @MainActor () -> Void) { duringSend = action }
 
     private(set) var pdfPages: [Int] = []
 
@@ -35,6 +38,10 @@ private actor FakeDestination: BookStateDestination {
     func updateRating(bookID: Int64, rating: Int?) async throws {
         if let error { throw error }
         ratings.append(rating)
+        if let action = duringSend {
+            duringSend = nil
+            await action()
+        }
     }
 }
 
@@ -61,12 +68,38 @@ private actor FakeDestination: BookStateDestination {
         try container.mainContext.fetch(FetchDescriptor<PendingChange>())
     }
 
-    @Test func outboxKeepsOneEntryPerBook() throws {
+    @Test func repeatedChangesGoOutOnce() async throws {
         BookOutbox.enqueue(.progress, bookID: book.id, in: container.mainContext)
         BookOutbox.enqueue(.progress, bookID: book.id, in: container.mainContext)
         try container.mainContext.save()
+        let server = FakeDestination()
 
+        #expect(await OutboxPusher(modelContainer: container).pushPending { _ in server } == OutboxPushResult(sent: 1))
+        #expect(await server.sent.count == 1)
+        #expect(try pending().isEmpty)
+    }
+
+    /// Rating 3, then 4 while 3 is still being sent: 4 must not be dropped with 3's entry.
+    @Test func aChangeMadeWhileSendingStaysQueued() async throws {
+        book.rating = 3
+        BookOutbox.enqueue(.rating, bookID: book.id, in: container.mainContext)
+        try container.mainContext.save()
+        let server = FakeDestination()
+        let context = container.mainContext
+        let book = book
+        await server.onNextSend {
+            book.rating = 4
+            BookOutbox.enqueue(.rating, bookID: book.id, in: context)
+            try? context.save()
+        }
+        let pusher = OutboxPusher(modelContainer: container)
+
+        _ = await pusher.pushPending { _ in server }
         #expect(try pending().count == 1)
+        _ = await OutboxPusher(modelContainer: container).pushPending { _ in server }
+
+        #expect(await server.ratings == [3, 4])
+        #expect(try pending().isEmpty)
     }
 
     @Test func pushesTheLatestPosition() async throws {

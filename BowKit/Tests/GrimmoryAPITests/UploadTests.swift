@@ -29,6 +29,23 @@ import Testing
         #expect(body.contains("EPUB BYTES"))
     }
 
+    /// The body streams from disk, so a retry after a token refresh must read the file again from the start.
+    @Test func aRefreshedRetrySendsTheWholeFileAgain() async throws {
+        let server = FakeGrimmory { request in
+            switch request.path {
+            case "/api/v1/auth/refresh": (200, Fixtures.tokenJSON(access: "A2", refresh: "R2"))
+            default: request.authorization == "Bearer A2" ? (204, "") : (401, "{}")
+            }
+        }
+        let file = try bookFile()
+
+        try await client(server).upload(file: file, to: .bookdrop)
+
+        let uploads = await server.requests.filter { $0.path == "/api/v1/files/upload/bookdrop" }
+        #expect(uploads.count == 2)
+        #expect(uploads.allSatisfy { $0.body?.contains("EPUB BYTES") == true && $0.body?.hasSuffix("--\r\n") == true })
+    }
+
     @Test func uploadsToTheBookdrop() async throws {
         let server = FakeGrimmory { _ in (200, #"{"id":9}"#) }
 
