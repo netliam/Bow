@@ -51,13 +51,15 @@ extension GrimmoryClient {
     public func upload(file: URL, fileName: String? = nil, to destination: GrimmoryUploadDestination) async throws {
         let name = fileName ?? file.lastPathComponent
         let boundary = "Bow-\(UUID().uuidString)"
-        var body = Data()
-        body.append(Data("--\(boundary)\r\n".utf8))
         let safeName = name.replacingOccurrences(of: "\"", with: "'")
-        body.append(Data("Content-Disposition: form-data; name=\"file\"; filename=\"\(safeName)\"\r\n".utf8))
-        body.append(Data("Content-Type: \(Self.mimeType(for: name))\r\n\r\n".utf8))
-        body.append(try Data(contentsOf: file, options: .mappedIfSafe))
-        body.append(Data("\r\n--\(boundary)--\r\n".utf8))
+        let head = Array(("--\(boundary)\r\n"
+            + "Content-Disposition: form-data; name=\"file\"; filename=\"\(safeName)\"\r\n"
+            + "Content-Type: \(Self.mimeType(for: name))\r\n\r\n").utf8)
+        let tail = Array("\r\n--\(boundary)--\r\n".utf8)
+        let fileSize = try FileManager.default.attributesOfItem(atPath: file.path(percentEncoded: false))[.size] as? Int ?? 0
+        // Streamed from disk a chunk at a time: comics and PDFs can be hundreds of megabytes.
+        let body = HTTPBody(MultipartFileStream(head: head, file: file, tail: tail),
+                            length: .known(Int64(head.count + fileSize + tail.count)), iterationBehavior: .multiple)
 
         let path: String
         let operationID: String
@@ -75,7 +77,7 @@ extension GrimmoryClient {
         request.headerFields[.accept] = "*/*"
         let middleware = AuthMiddleware(session: session)
         let (response, responseBody) = try await middleware.intercept(
-            request, body: HTTPBody(body), baseURL: serverURL, operationID: operationID
+            request, body: body, baseURL: serverURL, operationID: operationID
         ) { [transport] request, body, baseURL in
             try await transport.send(request, body: body, baseURL: baseURL, operationID: operationID)
         }
@@ -97,6 +99,39 @@ extension GrimmoryClient {
         case "cbz": "application/vnd.comicbook+zip"
         case "cbr": "application/vnd.comicbook-rar"
         default: "application/octet-stream"
+        }
+    }
+}
+
+/// The multipart body as chunks: the part header, the file read from disk, then the closing boundary. Each
+/// iteration reopens the file, so the body can be sent again after a token refresh.
+struct MultipartFileStream: AsyncSequence, Sendable {
+    typealias Element = ArraySlice<UInt8>
+    let head: [UInt8]
+    let file: URL
+    let tail: [UInt8]
+
+    func makeAsyncIterator() -> Iterator { Iterator(stream: self) }
+
+    struct Iterator: AsyncIteratorProtocol {
+        let stream: MultipartFileStream
+        var stage = 0
+        var handle: FileHandle?
+
+        mutating func next() async throws -> ArraySlice<UInt8>? {
+            switch stage {
+            case 0:
+                stage = 1
+                handle = try FileHandle(forReadingFrom: stream.file)
+                return stream.head[...]
+            case 1:
+                if let data = try handle?.read(upToCount: 256 * 1024), !data.isEmpty { return ArraySlice(data) }
+                try handle?.close()
+                stage = 2
+                return stream.tail[...]
+            default:
+                return nil
+            }
         }
     }
 }

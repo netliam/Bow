@@ -1,0 +1,68 @@
+{
+  "fill" : {
+    "linear-gradient" : [
+      "srgb:1.00000,0.83235,0.47321,1.00000",
+      "display-p3:0.97523,0.77736,0.53694,1.00000"
+    ]
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "blend-mode" : "normal",
+          "fill" : "automatic",
+          "image-name" : "09 Wheel right.svg",
+          "name" : "09 Wheel right"
+        },
+        {
+          "blend-mode" : "normal",
+          "fill" : "automatic",
+          "image-name" : "08 Wheel left.svg",
+          "name" : "08 Wheel left"
+        },
+        {
+          "image-name" : "07 Bookmark.svg",
+          "name" : "07 Bookmark"
+        },
+        {
+          "image-name" : "06 Page right.svg",
+          "name" : "06 Page right"
+        },
+        {
+          "image-name" : "05 Page left.svg",
+          "name" : "05 Page left"
+        },
+        {
+          "image-name" : "04 Pages yellow.svg",
+          "name" : "04 Pages yellow"
+        },
+        {
+          "image-name" : "03 Pages orange.svg",
+          "name" : "03 Pages orange"
+        },
+        {
+          "image-name" : "02 Connector.svg",
+          "name" : "02 Connector"
+        },
+        {
+          "image-name" : "01 Cover.svg",
+          "name" : "01 Cover"
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.3
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}

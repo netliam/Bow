@@ -13,9 +13,8 @@ public protocol BookStateDestination: Sendable {
 
 extension GrimmoryClient: BookStateDestination {}
 
-/// Records that something about a book changed on this device, so `OutboxPusher` sends it (ADR-0002). Keeps at
-/// most one pending entry per book and kind: only the latest value matters, and it's read from the book at push
-/// time.
+/// Records that something about a book changed on this device, so `OutboxPusher` sends it (ADR-0002). Only the
+/// latest value matters, and it's read from the book at push time.
 public enum BookOutbox {
     public enum Kind: String, CaseIterable, Sendable {
         case progress = "ReadingProgress"
@@ -28,13 +27,13 @@ public enum BookOutbox {
         let descriptor = FetchDescriptor<PendingChange>(
             predicate: #Predicate { $0.entityName == entity && $0.entityID == bookID }
         )
-        if let pending = try? context.fetch(descriptor).first {
-            // A newer value un-parks a change the server refused: it may accept this one.
+        // A newer value un-parks a change the server refused: it may accept this one.
+        for pending in (try? context.fetch(descriptor)) ?? [] {
             pending.isParked = false
             pending.nextAttemptAt = nil
-        } else {
-            context.insert(PendingChange(entityName: entity, entityID: bookID, operation: .update))
         }
+        // Always a new entry: an existing one may be mid-send, and the push deletes what it sent.
+        context.insert(PendingChange(entityName: entity, entityID: bookID, operation: .update))
     }
 
     /// Books with an unsent change of `kind`. Catalog sync leaves those fields alone so it can't undo a local edit.
@@ -65,7 +64,14 @@ public actor OutboxPusher {
             sortBy: [SortDescriptor(\.createdAt)]
         )
         var result = OutboxPushResult()
-        for change in (try? modelContext.fetch(descriptor)) ?? [] {
+        let changes = (try? modelContext.fetch(descriptor)) ?? []
+        // One send per book and kind covers every entry fetched here. Entries added while it's sending aren't in
+        // this list, so they stay queued and go out next time.
+        let groups = Dictionary(grouping: changes) { "\($0.entityName)|\($0.entityID)" }
+        var done: Set<String> = []
+        for change in changes {
+            let key = "\(change.entityName)|\(change.entityID)"
+            guard done.insert(key).inserted, let group = groups[key] else { continue }
             if let next = change.nextAttemptAt, next > now { continue }
             let bookID = change.entityID
             guard let kind = BookOutbox.Kind(rawValue: change.entityName),
@@ -73,7 +79,7 @@ public actor OutboxPusher {
                   let remoteID = book.remoteID, let accountID = book.account?.id,
                   let server = destination(accountID)
             else {
-                modelContext.delete(change)  // Nothing to send it to (a local book, or one gone from the library).
+                group.forEach(modelContext.delete)  // Nothing to send it to (a local book, or one gone from the library).
                 continue
             }
 
@@ -96,16 +102,20 @@ public actor OutboxPusher {
                 case .rating:
                     try await server.updateRating(bookID: remoteID, rating: book.rating)
                 }
-                modelContext.delete(change)
+                group.forEach(modelContext.delete)
                 result.sent += 1
             } catch let error as GrimmoryError where Self.isPermanent(error) {
-                change.isParked = true
-                change.lastError = "\(error)"
+                for entry in group {
+                    entry.isParked = true
+                    entry.lastError = "\(error)"
+                }
                 result.parked += 1
             } catch {
-                change.attempts += 1
-                change.lastError = "\(error)"
-                change.nextAttemptAt = now.addingTimeInterval(Self.backoff(attempts: change.attempts))
+                for entry in group {
+                    entry.attempts += 1
+                    entry.lastError = "\(error)"
+                    entry.nextAttemptAt = now.addingTimeInterval(Self.backoff(attempts: change.attempts))
+                }
                 result.failed += 1
             }
         }

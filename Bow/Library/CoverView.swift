@@ -77,16 +77,17 @@ actor CoverCache {
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         return url
     }()
-    private var memory: [String: UIImage] = [:]
+    /// Evicted by the system under memory pressure; covers are on disk too.
+    private let memory = NSCache<NSString, UIImage>()
     /// Downloads in progress, so two views showing the same cover share one request.
     private var inFlight: [String: Task<UIImage?, Never>] = [:]
 
     func image(for request: CoverRequest) async -> UIImage? {
-        if let image = memory[request.key] { return image }
+        if let image = memory.object(forKey: request.key as NSString) { return image }
 
         let file = directory.appending(path: request.key + ".jpg")
         if let data = try? Data(contentsOf: file), let image = UIImage(data: data) {
-            memory[request.key] = image
+            memory.setObject(image, forKey: request.key as NSString)
             return image
         }
 
@@ -101,7 +102,7 @@ actor CoverCache {
         inFlight[request.key] = task
         let image = await task.value
         inFlight[request.key] = nil
-        memory[request.key] = image
+        if let image { memory.setObject(image, forKey: request.key as NSString) }
         return image
     }
 }
