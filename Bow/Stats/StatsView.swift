@@ -5,7 +5,7 @@ import GrimmoryAPI
 import SwiftData
 import SwiftUI
 
-/// The reading stats Grimmory keeps for the first server account, loaded once and shared by Home and the Stats page.
+/// The reading stats Grimmory keeps for the first server account, kept while the app runs.
 @MainActor
 @Observable
 final class ReadingStatsStore {
@@ -36,66 +36,6 @@ final class ReadingStatsStore {
         }
     }
 }
-
-/// The small summary on Home: streak and time read this year, opening the full page.
-struct ReadingSummaryCard: View {
-    @Environment(ReadingStatsStore.self) private var store
-    @Query(sort: \Account.createdAt) private var accounts: [Account]
-
-    var body: some View {
-        VStack {  // Not a `Group`: with no stats yet it would be empty, and `.task` never runs on an empty view.
-            if let stats = store.stats {
-                NavigationLink(value: StatsDestination()) {
-                    HStack(spacing: 0) {
-                        figure("\(stats.currentStreak)", "day streak",
-                               symbol: "flame.fill", tint: .orange)
-                        Divider().frame(height: 36)
-                        figure(Self.hours(stats.secondsThisYear), "read this year", symbol: "clock.fill", tint: .blue)
-                        Divider().frame(height: 36)
-                        figure("\(stats.booksFinishedThisYear)", "finished", symbol: "checkmark.seal.fill", tint: .green)
-                    }
-                    .padding(.vertical, 14)
-                    .background(.fill.quaternary, in: .rect(cornerRadius: 14))
-                    .contentShape(.rect)
-                }
-                .buttonStyle(.plain)
-                .padding(.horizontal)
-                .padding(.bottom, 18)
-                .accessibilityHint("Shows your reading stats.")
-            }
-        }
-        .task(id: accounts.count) { await store.load(from: accounts) }
-    }
-
-    private func figure(_ value: String, _ label: String, symbol: String, tint: Color) -> some View {
-        VStack(spacing: 4) {
-            Label(value, systemImage: symbol)
-                .font(.title3.bold())
-                .labelStyle(StatLabelStyle(tint: tint))
-            Text(label).font(.caption).foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .accessibilityElement(children: .combine)
-    }
-
-    /// "12 h" or "45 min".
-    static func hours(_ seconds: Int) -> String {
-        seconds >= 3600 ? "\(seconds / 3600) h" : "\(seconds / 60) min"
-    }
-}
-
-private struct StatLabelStyle: LabelStyle {
-    let tint: Color
-    func makeBody(configuration: Configuration) -> some View {
-        HStack(spacing: 5) {
-            configuration.icon.foregroundStyle(tint).font(.subheadline)
-            configuration.title
-        }
-    }
-}
-
-/// Navigation value for the Stats page.
-struct StatsDestination: Hashable {}
 
 /// The full reading stats page.
 struct StatsView: View {
@@ -143,7 +83,7 @@ struct StatsView: View {
                 tile("\(stats.longestStreak)", "Longest streak", "trophy.fill", .yellow)
             }
             GridRow {
-                tile(ReadingSummaryCard.hours(stats.secondsThisYear), "Read this year", "clock.fill", .blue)
+                tile(Self.hours(stats.secondsThisYear), "Read this year", "clock.fill", .blue)
                 tile("\(stats.booksFinishedThisYear)", "Finished this year", "checkmark.seal.fill", .green)
             }
         }
@@ -247,6 +187,11 @@ struct StatsView: View {
         let weekday = Calendar(identifier: .gregorian).component(.weekday, from: first)  // Sunday = 1
         let padding = (weekday + 5) % 7  // Days since Monday.
         return Array(repeating: nil, count: padding) + days.map { $0 }
+    }
+
+    /// "12 h" or "45 min".
+    static func hours(_ seconds: Int) -> String {
+        seconds >= 3600 ? "\(seconds / 3600) h" : "\(seconds / 60) min"
     }
 
     static func hourLabel(_ hour: Int) -> String {

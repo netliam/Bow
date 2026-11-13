@@ -6,14 +6,16 @@ import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Bow's three places: Home (what to read next), Library (everything, by collection) and Search. Tabs on iPhone;
-/// a sidebar on iPad and Mac.
+/// Bow's places: Home (what to read next), Library (everything), Stats and Search, plus, in the iPad and Mac
+/// sidebar, series, authors and your Grimmory shelves, as Grimmory's web sidebar has them. Tabs on iPhone.
 struct RootView: View {
-    enum Tab: Hashable { case home, library, search }
+    enum Tab: Hashable { case home, library, stats, search, series, authors, shelf(UUID) }
 
     @Environment(\.modelContext) private var modelContext
     @Environment(LibrarySync.self) private var librarySync
     @Environment(BookIntake.self) private var intake
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    @Query(sort: \Shelf.name) private var shelves: [Shelf]
 
     @State private var tab: Tab = .home
     @State private var actions = AppActions()
@@ -32,8 +34,36 @@ struct RootView: View {
                         .bookDestinations()
                 }
             }
+            SwiftUI.Tab("Stats", systemImage: "chart.line.uptrend.xyaxis", value: Tab.stats) {
+                NavigationStack {
+                    StatsView()
+                        .bookDestinations()
+                }
+            }
             SwiftUI.Tab(value: Tab.search, role: .search) {
                 SearchTab()
+            }
+            // Sidebar only: hidden tabs would still fill a "More" tab on iPhone, where the Library chips reach these.
+            if sizeClass == .regular {
+                TabSection("Browse") {
+                    collectionTab(.series, value: .series)
+                    collectionTab(.authors, value: .authors)
+                }
+                .defaultVisibility(.hidden, for: .tabBar)
+            }
+            if sizeClass == .regular, !shelves.isEmpty {
+                TabSection("Shelves") {
+                    ForEach(sortedShelves) { shelf in
+                        SwiftUI.Tab(shelf.name, systemImage: ShelfIcon.symbol(for: shelf), value: Tab.shelf(shelf.id)) {
+                            NavigationStack {
+                                LibraryContent(filter: .shelf(shelf.id), title: shelf.name) { EmptyView() }
+                                    .bookDestinations()
+                            }
+                        }
+                        .badge(shelf.books.count(where: { !$0.isRemovedOnServer }))
+                    }
+                }
+                .defaultVisibility(.hidden, for: .tabBar)
             }
         }
         .tabViewStyle(.sidebarAdaptable)
@@ -60,6 +90,21 @@ struct RootView: View {
 }
 
 extension RootView {
+    /// Regular shelves first, then magic ones, each by name, as Grimmory lists them.
+    private var sortedShelves: [Shelf] {
+        shelves.filter { $0.account?.kind == .grimmory }
+            .sorted { ($0.kind == .regular ? 0 : 1, $0.name) < ($1.kind == .regular ? 0 : 1, $1.name) }
+    }
+
+    private func collectionTab(_ filter: LibraryFilter, value: Tab) -> some TabContent<Tab> {
+        SwiftUI.Tab(filter.title, systemImage: filter.symbol, value: value) {
+            NavigationStack {
+                LibraryContent(filter: filter, title: filter.title) { EmptyView() }
+                    .bookDestinations()
+            }
+        }
+    }
+
     /// What the file picker offers: EPUBs, plus PDFs and comics when there's a server to upload them to.
     static var bookTypes: [UTType] {
         [.epub, .pdf] + ["cbz", "cbr", "cb7"].compactMap { UTType(filenameExtension: $0) }
@@ -79,7 +124,6 @@ extension View {
     func bookDestinations() -> some View {
         navigationDestination(for: Book.self) { BookDetailView(book: $0) }
             .navigationDestination(for: BookCollection.self) { CollectionView(collection: $0) }
-            .navigationDestination(for: StatsDestination.self) { _ in StatsView() }
             .navigationDestination(for: LibraryFilter.self) { filter in
                 LibraryContent(filter: filter, title: filter.title)
             }

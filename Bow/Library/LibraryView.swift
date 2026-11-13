@@ -107,6 +107,7 @@ enum LibrarySort: String, CaseIterable, Identifiable {
 /// The Library tab: collection chips along the top, and the chosen collection below.
 struct LibraryTab: View {
     @Query(sort: \Account.createdAt) private var accounts: [Account]
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var filter: LibraryFilter = .all
 
     var body: some View {
@@ -133,10 +134,13 @@ struct LibraryTab: View {
     }
 
     private var chipFilters: [LibraryFilter] {
-        var items: [LibraryFilter] = [.all, .reading, .finished, .downloaded, .series, .authors]
+        // Wide layouts have the sidebar, which lists series, authors and shelves.
+        let sidebar = sizeClass == .regular
+        var items: [LibraryFilter] = [.all, .reading, .finished, .downloaded] + (sidebar ? [] : [.series, .authors])
         let grimmory = accounts.filter { $0.kind == .grimmory }
         if grimmory.count > 1 { items += grimmory.map { .account($0.id) } }
         if accounts.contains(where: { $0.kind == .local && !$0.books.isEmpty }) { items.append(.onDevice) }
+        if sidebar { return items }
         let shelves = grimmory.flatMap(\.shelves)
             .sorted { ($0.kind == .regular ? 0 : 1, $0.name) < ($1.kind == .regular ? 0 : 1, $1.name) }
         items += shelves.map { .shelf($0.id) }
@@ -312,8 +316,14 @@ private struct BookTile: View {
             CoverView(book: book)
                 .overlay(alignment: .bottomTrailing) { downloadBadge.padding(6) }
             if let fraction = book.progress?.fraction, fraction > 0 {
-                ProgressView(value: min(fraction, 1))
-                    .tint(.secondary)
+                HStack(spacing: 5) {
+                    ProgressRing(fraction: fraction, lineWidth: 2)
+                        .frame(width: 13, height: 13)
+                    Text("\(Int((min(fraction, 1) * 100).rounded()))%")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
+                .accessibilityElement(children: .combine)
             }
             if showsSeriesNumber, let number = book.seriesNumber {
                 Text("Book \(number.formatted())")

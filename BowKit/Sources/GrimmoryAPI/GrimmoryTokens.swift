@@ -39,7 +39,8 @@ public struct KeychainTokenStore: GrimmoryTokenStore {
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
-            kSecUseDataProtectionKeychain as String: true,
+            // No `kSecUseDataProtectionKeychain`: on Mac it needs a provisioning profile (else -34018), and iOS
+            // always uses that keychain anyway.
         ]
     }
 
