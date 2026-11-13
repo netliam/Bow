@@ -79,8 +79,18 @@ extension GrimmoryClient {
                 state: request.state
             ))
         }
-        guard case .ok(let ok) = output else { throw GrimmoryError(status: statusCode(of: output)) }
-        return try await finishSignIn(try ok.body.json)
+        switch output {
+        case .ok(let ok):
+            return try await finishSignIn(try ok.body.json)
+        case .undocumented(let status, let payload):
+            // Grimmory says why (e.g. the provider's `invalid_grant`); a bare status hides the cause.
+            struct ErrorBody: Decodable { let message: String? }
+            var message: String?
+            if let body = payload.body, let data = try? await Data(collecting: body, upTo: 64 * 1024) {
+                message = (try? JSONDecoder().decode(ErrorBody.self, from: data))?.message
+            }
+            throw GrimmoryError.oidcFailed(message.map { "\($0) (\(status))" } ?? "the server returned an error (\(status))")
+        }
     }
 
     private func authorizationEndpoint(issuer: URL) async throws -> URL {

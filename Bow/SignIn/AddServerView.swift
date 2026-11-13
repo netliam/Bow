@@ -26,6 +26,7 @@ struct AddServerView: View {
     @State private var isShowingProxySignIn = false
     @State private var pendingPasswordChange: PendingAccount?
     @FocusState private var focus: Field?
+    @State private var barHeight: CGFloat = 0
 
     /// The server being signed in to. The account id is picked now because tokens are stored under it.
     struct ConnectedServer {
@@ -74,6 +75,12 @@ struct AddServerView: View {
                 .animation(.smooth, value: errorMessage)
             }
             .scrollBounceBehavior(.basedOnSize)
+            .defaultScrollAnchor(.center, for: .alignment)  // Short steps sit in the middle, not at the top.
+            #if targetEnvironment(macCatalyst)
+            // Centring happens below the toolbar; padding the bottom by its height makes the gaps above and below match.
+            .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.top } action: { barHeight = $0 }
+            .safeAreaPadding(.bottom, barHeight)
+            #endif
             .background(Color(.systemGroupedBackground))
             .disabled(working != nil)
             .navigationBarTitleDisplayMode(.inline)
@@ -86,6 +93,11 @@ struct AddServerView: View {
                 }
             }
         }
+        #if targetEnvironment(macCatalyst)
+        // The Mac's default form sheet is too short for the password form and its errors.
+        .frame(idealWidth: 480, idealHeight: 580)
+        .presentationSizing(.fitted)
+        #endif
         .sheet(isPresented: $isShowingProxySignIn) {
             if let server {
                 ProxySignInView(serverURL: server.url, client: server.client) { user in

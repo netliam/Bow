@@ -26,11 +26,14 @@ struct BookDetailView: View {
                 header
                 readButton
                 if let fraction = book.progress?.fraction, fraction > 0 {
-                    ProgressView(value: min(fraction, 1)) {
+                    HStack(spacing: 8) {
+                        ProgressRing(fraction: fraction)
+                            .frame(width: 22, height: 22)
                         Text("\(Int((min(fraction, 1) * 100).rounded()))% read")
-                            .font(.footnote)
+                            .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
+                    .accessibilityElement(children: .combine)
                 }
                 statusAndRating
                 about

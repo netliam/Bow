@@ -20,9 +20,7 @@ struct AccountsView: View {
                 Section("Servers") {
                     ForEach(accounts.filter { $0.kind == .grimmory }) { account in
                         HStack(spacing: 12) {
-                            Image(systemName: "server.rack")
-                                .foregroundStyle(.tint)
-                                .frame(width: 28)
+                            IconTile(symbol: "server.rack", color: .blue)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(account.displayName).font(.body.weight(.medium))
                                 Text(subtitle(for: account))
@@ -31,26 +29,35 @@ struct AccountsView: View {
                             }
                             Spacer()
                             Button("Remove", role: .destructive) { accountToRemove = account }
-                                .buttonStyle(.borderless)
-                                .font(.footnote)
+                                .buttonStyle(.borderedProminent)
+                                .tint(.red)
+                                .controlSize(.small)
                         }
                     }
-                    Button("Add Grimmory Server", systemImage: "plus") {
+                    Button {
                         dismiss()
                         actions.isAddingServer = true
+                    } label: {
+                        Row(title: "Add Grimmory Server", symbol: "plus", color: .green)
                     }
                 }
                 Section("On This Device") {
-                    Button("Add Books from Files", systemImage: "doc.badge.plus") {
+                    Button {
                         dismiss()
                         actions.isImporting = true
+                    } label: {
+                        Row(title: "Add Books from Files", symbol: "doc.badge.plus", color: .orange)
                     }
-                    Button("Sync Now", systemImage: "arrow.triangle.2.circlepath") {
+                    Button {
                         Task { await librarySync.syncAll(modelContext.container) }
+                    } label: {
+                        Row(title: librarySync.isSyncing ? "Syncing…" : "Sync Now",
+                            symbol: "arrow.triangle.2.circlepath", color: .indigo)
                     }
                     .disabled(librarySync.isSyncing)
                 }
             }
+            .tint(.primary)  // Rows read as list items, not links; Remove keeps its own red.
             .navigationTitle("Accounts")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
@@ -81,5 +88,36 @@ struct AccountsView: View {
         for book in account.books { BookStorage.standard.removeFiles(for: book.id) }  // Downloads go too.
         modelContext.delete(account)
         try? modelContext.save()
+    }
+}
+
+/// A white symbol on a small coloured tile, as in Settings, so every row's text starts at the same place.
+private struct IconTile: View {
+    let symbol: String
+    let color: Color
+
+    var body: some View {
+        Image(systemName: symbol)
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(width: 30, height: 30)
+            .background(color.gradient, in: .rect(cornerRadius: 7))
+            .accessibilityHidden(true)
+    }
+}
+
+/// An action row: tile and plain title, so it reads as a list item rather than a link.
+private struct Row: View {
+    let title: String
+    let symbol: String
+    let color: Color
+
+    var body: some View {
+        HStack(spacing: 12) {
+            IconTile(symbol: symbol, color: color)
+            Text(title).foregroundStyle(.primary)
+            Spacer(minLength: 0)
+        }
+        .contentShape(.rect)
     }
 }

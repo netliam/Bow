@@ -2,14 +2,13 @@ import BowModel
 import SwiftData
 import SwiftUI
 
-/// What to read next: books in progress, the next book in series you've started, what's new, what's downloaded,
-/// and your shelves. Built from the books on this device, so it works offline.
+/// What to read next: books in progress, what's new, and something you haven't opened yet. Built from the books on
+/// this device, so it works offline.
 struct HomeView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(LibrarySync.self) private var librarySync
     @Environment(AppActions.self) private var actions
     @Query(filter: #Predicate<Book> { !$0.isRemovedOnServer }) private var books: [Book]
-    @Query(sort: \Shelf.name) private var shelves: [Shelf]
 
     var body: some View {
         ScrollView {
@@ -20,21 +19,10 @@ struct HomeView: View {
                     if !continueReading.isEmpty {
                         ContinueSection(books: continueReading)
                     }
-                    ReadingSummaryCard()
-                    shelfRow("Next in Series", subtitle: "Pick up where a series left off.", books: nextInSeries)
                     shelfRow("Recently Added", subtitle: "New in your library.", books: recentlyAdded,
                              seeAll: .all, large: true)
-                    shelfRow("Ready Offline", subtitle: "Downloaded to this device.", books: downloaded,
-                             seeAll: .downloaded)
-                    ForEach(shelves.filter { $0.kind == .regular }) { shelf in
-                        shelfRow(shelf.name, subtitle: nil, books: Array(shelf.books.filter { !$0.isRemovedOnServer }.prefix(20)),
-                                 seeAll: .shelf(shelf.id))
-                    }
-                    ForEach(shelves.filter { $0.kind == .magic }) { shelf in
-                        shelfRow(shelf.name, subtitle: "Magic shelf", books: Array(shelf.books.filter { !$0.isRemovedOnServer }.prefix(20)),
-                                 seeAll: .shelf(shelf.id))
-                    }
-                    shelfRow("Finished", subtitle: "Books you've read.", books: finished, seeAll: .finished)
+                    shelfRow("Discover Something New", subtitle: "Books you haven't opened yet.", books: discover,
+                             large: true)
                 }
                 .padding(.bottom, 24)
             }
@@ -53,33 +41,16 @@ struct HomeView: View {
             .prefix(12).map { $0 }
     }
 
-    /// For each series with a finished or started book, the first later book you haven't started.
-    private var nextInSeries: [Book] {
-        let inProgress = Set(continueReading.map(\.id))
-        return Dictionary(grouping: books.filter { $0.seriesName != nil }) { $0.seriesName! }
-            .compactMap { _, series -> Book? in
-                let ordered = BookCollection.series("").sorted(series)
-                guard let lastStarted = ordered.lastIndex(where: { $0.readStatus == GrimmoryReadStatusRaw.read || $0.isInProgress })
-                else { return nil }
-                return ordered[(lastStarted + 1)...].first { book in
-                    !inProgress.contains(book.id) && book.readStatus != GrimmoryReadStatusRaw.read
-                        && (book.progress?.fraction ?? 0) == 0
-                }
-            }
-            .sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
-    }
-
     private var recentlyAdded: [Book] {
         LibrarySort.recentlyAdded.sorted(books).prefix(15).map { $0 }
     }
 
-    private var downloaded: [Book] {
-        books.filter { LibraryFilter.downloaded.contains($0) && $0.readStatus != GrimmoryReadStatusRaw.read }
-            .prefix(20).map { $0 }
-    }
-
-    private var finished: [Book] {
-        LibrarySort.recentlyRead.sorted(books.filter { LibraryFilter.finished.contains($0) }).prefix(20).map { $0 }
+    /// Unopened books in a random order that holds while the app runs (Swift seeds hashes per launch), so the row
+    /// doesn't reshuffle on every sync but is new each launch.
+    private var discover: [Book] {
+        books.filter { !$0.isInProgress && $0.readStatus != GrimmoryReadStatusRaw.read && ($0.progress?.fraction ?? 0) == 0 }
+            .sorted { $0.id.hashValue < $1.id.hashValue }
+            .prefix(15).map { $0 }
     }
 
     @ViewBuilder
@@ -211,7 +182,7 @@ private struct ContinueSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionHeader(title: "Continue", seeAll: .reading)
+            SectionHeader(title: "Continue Reading", seeAll: .reading)
             ScrollView(.horizontal) {
                 LazyHStack(spacing: 14) {
                     ForEach(books) { book in
@@ -251,11 +222,11 @@ private struct ContinueCard: View {
                 Text(detail)
                     .font(.footnote)
                     .opacity(0.7)
-                ProgressView(value: min(book.progress?.fraction ?? 0, 1))
-                    .tint(.white)
-                    .padding(.top, 4)
             }
             Spacer(minLength: 0)
+            ProgressRing(fraction: book.progress?.fraction ?? 0, lineWidth: 4)
+                .tint(.white)
+                .frame(width: 34, height: 34)
         }
         .foregroundStyle(.white)
         .padding(12)

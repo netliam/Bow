@@ -285,6 +285,10 @@ struct ReaderScreen: View {
         // Grimmory's styles and colours, so annotations look the same here and in its web reader. The default
         // menu actions (note, look up, search, copy, share; delete on a highlight) already match it.
         configuration.highlightMenu.palettes = GrimmoryHighlights.palettes
+        #if targetEnvironment(macCatalyst)
+        // Books on the Mac only slides pages; no curl, and no page-turn setting.
+        configuration.allowsPageCurl = false
+        #endif
 
         let view = DCReaderViewBuilder.build(
             epub,
