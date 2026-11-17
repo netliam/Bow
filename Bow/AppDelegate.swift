@@ -1,5 +1,5 @@
 import BowLibrary
-import DCEpubReaderKit
+import BookKit
 import UIKit
 
 /// The few things SwiftUI still routes through an app delegate.
@@ -18,9 +18,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         Self.transfer.setBackgroundEventsCompletion { completion() }
     }
 
-    /// The reader's rotation lock, per window (DCEpubReaderKit 0.1.0).
+    /// The reader's rotation lock, per window (BookKit 0.1.0).
     func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?)
         -> UIInterfaceOrientationMask {
-        DCReaderOrientationLock.supportedOrientations(for: window)
+        BKReaderOrientationLock.supportedOrientations(for: window)
     }
 }

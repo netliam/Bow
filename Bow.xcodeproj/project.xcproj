@@ -16,9 +16,9 @@
       "path": "BowKit",
     }, {
       "kind": "remote",
-      "repository": "https://github.com/netliam/DCEpubReaderKit.git",
+      "repository": "https://github.com/netliam/BookKit.git",
       "version": {
-        "up-to-next-minor-version": "0.2.0",
+        "branch": "main",
       },
     },
   ],
@@ -61,8 +61,8 @@
           "product-name": "GrimmoryAPI",
           "build-phase": { "build-phase": "frameworks" },
         }, {
-          "package": "DCEpubReaderKit",
-          "product-name": "DCEpubReaderKit",
+          "package": "BookKit",
+          "product-name": "BookKit",
           "build-phase": { "build-phase": "frameworks" },
         },
       ],

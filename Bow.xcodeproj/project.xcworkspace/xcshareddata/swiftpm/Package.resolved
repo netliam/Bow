@@ -1,13 +1,13 @@
 {
-  "originHash" : "b8348cb9506c3e5582a0c1db5ed620b9c2dc0d6432e7942cdaad1e7784b8d0eb",
+  "originHash" : "8b82e7702af048804ae36ba9d45d495c3c9b8af00e8d9806f32fd6667efa0eef",
   "pins" : [
     {
-      "identity" : "dcepubreaderkit",
+      "identity" : "bookkit",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/netliam/DCEpubReaderKit.git",
+      "location" : "https://github.com/netliam/BookKit.git",
       "state" : {
-        "revision" : "ff2391649bcdb90b940490c1448019b1e21245fd",
-        "version" : "0.2.0"
+        "branch" : "main",
+        "revision" : "8df5c489178bf585ee00a1a179cb698e3e192ec2"
       }
     },
     {
