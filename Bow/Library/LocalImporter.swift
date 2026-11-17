@@ -1,6 +1,6 @@
 import BowLibrary
 import BowModel
-import DCEpubReaderKit
+import BookKit
 import Foundation
 import Observation
 import SwiftData
@@ -44,7 +44,7 @@ final class LocalImporter {
             let copy = try copyIn(url)
             let path = try storage.store(downloaded: copy, bookID: bookID, format: .epub)
             let metadata = try await Task.detached(priority: .userInitiated) { [storage] in
-                let epub = try DCEpubParser.parse(from: try storage.unzippedEPUB(relativePath: path))
+                let epub = try BKEpubParser.parse(from: try storage.unzippedEPUB(relativePath: path))
                 Self.saveCover(of: epub, to: storage.directory(for: bookID))
                 return Metadata(title: epub.metadata.title, authors: epub.metadata.creators,
                                 publisher: epub.metadata.publisher)
@@ -94,7 +94,7 @@ final class LocalImporter {
 
     /// Copies the EPUB's cover image (the `cover-image` item, or the one EPUB 2's `<meta name="cover">` names) to
     /// `<book folder>/cover`, where `CoverView` looks for local books' covers.
-    nonisolated private static func saveCover(of epub: DCEpubBook, to folder: URL) {
+    nonisolated private static func saveCover(of epub: BKEpubBook, to folder: URL) {
         let item = epub.manifest.first { ($0.properties ?? "").split(separator: " ").contains("cover-image") }
             ?? epub.manifest.first { $0.id == epub.metadata.coverHint && $0.mediaType.hasPrefix("image/") }
         guard let item else { return }

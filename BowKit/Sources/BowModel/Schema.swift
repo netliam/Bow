@@ -119,7 +119,7 @@ public enum BowSchemaV2: VersionedSchema {
     }
 
     /// Where the reader is in a book (ADR-0003). The CFI is canonical for sync; `kitCoords` and `spineIndex` are
-    /// DCEpubReaderKit's own position, cached for an exact reopen on this device.
+    /// BookKit's own position, cached for an exact reopen on this device.
     @Model
     public final class ReadingProgress {
         public var book: Book?

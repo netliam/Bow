@@ -1,12 +1,12 @@
 import BowLibrary
 import BowModel
 import BowSync
-import DCEpubReaderKit
+import BookKit
 import GrimmoryAPI
 import SwiftData
 import SwiftUI
 
-/// Opens a downloaded EPUB in DCEpubReaderKit where the reader last left it, or where another device left it
+/// Opens a downloaded EPUB in BookKit where the reader last left it, or where another device left it
 /// if that's more recent (after asking, when this device has its own position).
 struct ReaderScreen: View {
     let book: Book
@@ -25,11 +25,10 @@ struct ReaderScreen: View {
     @State private var sessions: ReadingSessionRecorder?
     @Environment(\.scenePhase) private var scenePhase
 
-    /// A PDF to show, and the page to start on (from 0).
+    /// BookKit's PDF reader, built once (it keeps its own state), and what it reads from and saves to.
     struct PDFOpening {
-        let url: URL
-        let page: Int
-        let sessions: ReadingSessionRecorder
+        let view: BKPDFReaderView
+        let store: BowPDFStore
     }
 
     /// Both this device and the server have a page, and the server's is newer.
@@ -39,9 +38,9 @@ struct ReaderScreen: View {
         let percentage: Double
     }
 
-    /// Built once: `DCReaderView` observes the view model it's given, so rebuilding it would restart the book.
+    /// Built once: `BKReaderView` observes the view model it's given, so rebuilding it would restart the book.
     struct LoadedReader {
-        let view: DCReaderView
+        let view: BKReaderView
         let delegate: BowReaderDelegate
     }
 
@@ -54,7 +53,7 @@ struct ReaderScreen: View {
 
     /// Both this device and the server have a position, and the server's is newer.
     struct Choice {
-        let epub: DCEpubBook
+        let epub: BKEpubBook
         let server: ServerPosition
     }
 
@@ -63,7 +62,7 @@ struct ReaderScreen: View {
             if let reader {
                 reader.view
             } else if let pdf {
-                PDFReaderView(book: book, url: pdf.url, startPage: pdf.page, sessions: pdf.sessions) { close() }
+                pdf.view
             } else if let choice {
                 choiceView(serverPercentage: choice.server.percentage) {
                     start(choice.epub, at: choice.server)
@@ -72,9 +71,9 @@ struct ReaderScreen: View {
                 }
             } else if let pdfChoice {
                 choiceView(serverPercentage: pdfChoice.percentage) {
-                    pdf = PDFOpening(url: pdfChoice.url, page: pdfChoice.serverPage, sessions: pdfRecorder())
+                    openPDF(pdfChoice.url, at: pdfChoice.serverPage)
                 } stay: {
-                    pdf = PDFOpening(url: pdfChoice.url, page: book.progress?.spineIndex ?? 0, sessions: pdfRecorder())
+                    openPDF(pdfChoice.url, at: book.progress?.spineIndex ?? 0)
                 }
             } else if let failure {
                 ContentUnavailableView {
@@ -109,6 +108,25 @@ struct ReaderScreen: View {
         }
     }
 
+    /// Builds the PDF reader at `page` (from 0), with Bow's highlights and position behind it.
+    private func openPDF(_ url: URL, at page: Int) {
+        pdfChoice = nil
+        let container = modelContext.container
+        let store = BowPDFStore(book: book, url: url, startPage: page, context: modelContext,
+                                sessions: pdfRecorder()) { [librarySync] in
+            Task { await librarySync.pushChanges(container) }
+        }
+        var menu = BKHighlightMenuConfiguration()
+        menu.palettes = GrimmoryHighlights.palettes
+        guard let view = BKPDFReaderViewBuilder.build(url: url, bookId: book.id.uuidString, highlightStore: store,
+                                                      positionStore: store, menuConfiguration: menu)
+        else {
+            failure = "The file couldn't be read as a PDF. It may be password protected."
+            return
+        }
+        pdf = PDFOpening(view: view, store: store)
+    }
+
     /// One recorder per opening, kept so closing the reader can end its session.
     private func pdfRecorder() -> ReadingSessionRecorder {
         let recorder = sessions ?? ReadingSessionRecorder(book: book, bookType: .pdf, context: modelContext)
@@ -138,10 +156,10 @@ struct ReaderScreen: View {
             await loadPDF(BookStorage.standard.url(forRelativePath: path))
             return
         }
-        let epub: DCEpubBook
+        let epub: BKEpubBook
         do {
             epub = try await Task.detached(priority: .userInitiated) {
-                try DCEpubParser.parse(from: try BookStorage.standard.unzippedEPUB(relativePath: path))
+                try BKEpubParser.parse(from: try BookStorage.standard.unzippedEPUB(relativePath: path))
             }.value
         } catch {
             failure = "The file couldn't be read as an EPUB. Try removing the download and downloading it again."
@@ -168,7 +186,7 @@ struct ReaderScreen: View {
         guard let remoteID = book.remoteID, let account = book.account,
               let client = GrimmoryAccounts.client(for: account)
         else {
-            pdf = PDFOpening(url: url, page: local ?? 0, sessions: pdfRecorder())
+            openPDF(url, at: local ?? 0)
             return
         }
         let fetched = await withTaskGroup(of: GrimmoryPDFProgress??.self) { group in
@@ -182,11 +200,11 @@ struct ReaderScreen: View {
             return first ?? nil
         }
         guard let server = fetched, server.page >= 1, server.page - 1 != local else {
-            pdf = PDFOpening(url: url, page: local ?? 0, sessions: pdfRecorder())
+            openPDF(url, at: local ?? 0)
             return
         }
         guard let local else {
-            pdf = PDFOpening(url: url, page: server.page - 1, sessions: pdfRecorder())  // Never opened here.
+            openPDF(url, at: server.page - 1)  // Never opened here.
             return
         }
         // As for EPUBs: this device's own pushes move `lastReadTime` too, so require a clear margin.
@@ -194,7 +212,7 @@ struct ReaderScreen: View {
         if let serverTime = server.lastReadTime, serverTime > localTime.addingTimeInterval(60) {
             pdfChoice = PDFChoice(url: url, serverPage: server.page - 1, percentage: server.percentage)
         } else {
-            pdf = PDFOpening(url: url, page: local, sessions: pdfRecorder())
+            openPDF(url, at: local)
         }
     }
 
@@ -218,7 +236,7 @@ struct ReaderScreen: View {
 
     /// The position Grimmory has, if it's newer than this device's and somewhere else. Gives up after a few
     /// seconds so a slow or unreachable server never keeps a downloaded book from opening.
-    private func newerServerPosition(in epub: DCEpubBook) async -> ServerPosition? {
+    private func newerServerPosition(in epub: BKEpubBook) async -> ServerPosition? {
         guard let remoteID = book.remoteID, let account = book.account,
               let client = GrimmoryAccounts.client(for: account)
         else { return nil }
@@ -240,13 +258,13 @@ struct ReaderScreen: View {
         let local = book.progress?.updatedAt ?? .distantPast
         guard let serverTime = server.lastReadTime, serverTime > local.addingTimeInterval(60) else { return nil }
 
-        guard let target = await DCCFIConverter(book: epub).coords(fromCFI: cfi) else { return nil }
+        guard let target = await BKCFIConverter(book: epub).coords(fromCFI: cfi) else { return nil }
         return ServerPosition(spineIndex: target.spineIndex, coords: target.coords, percentage: server.percentage)
     }
 
     /// Brings in annotations made elsewhere (Grimmory's web reader, other devices) and places them in this
     /// edition. Like the position check, it gives up after a few seconds rather than hold the book closed.
-    private func syncAnnotations(in epub: DCEpubBook) async {
+    private func syncAnnotations(in epub: BKEpubBook) async {
         if book.remoteID != nil, let account = book.account, let client = GrimmoryAccounts.client(for: account) {
             let syncer = AnnotationSyncer(context: modelContext)
             let bookID = book.id
@@ -261,7 +279,7 @@ struct ReaderScreen: View {
 
         let unplaced = book.annotations.filter { $0.deletedAt == nil && $0.kitCoords == nil && $0.cfi != nil }
         guard !unplaced.isEmpty else { return }
-        let converter = DCCFIConverter(book: epub)
+        let converter = BKCFIConverter(book: epub)
         for annotation in unplaced {
             guard let cfi = annotation.cfi, let place = await converter.coords(fromCFI: cfi) else { continue }
             annotation.kitCoords = place.coords
@@ -270,7 +288,7 @@ struct ReaderScreen: View {
         try? modelContext.save()
     }
 
-    private func start(_ epub: DCEpubBook, at server: ServerPosition?) {
+    private func start(_ epub: BKEpubBook, at server: ServerPosition?) {
         choice = nil
         let container = modelContext.container
         let recorder = ReadingSessionRecorder(book: book, bookType: .epub, context: modelContext)
@@ -278,7 +296,7 @@ struct ReaderScreen: View {
         let delegate = BowReaderDelegate(context: modelContext, bookID: book.id, epub: epub, sessions: recorder) {
             Task { await librarySync.pushChanges(container) }
         }
-        var configuration = DCReaderConfiguration()
+        var configuration = BKReaderConfiguration()
         configuration.bookId = book.id.uuidString
         configuration.defaults = UserDefaults(suiteName: "app.bow.reader") ?? .standard
         configuration.onClose = { close() }
@@ -290,7 +308,7 @@ struct ReaderScreen: View {
         configuration.allowsPageCurl = false
         #endif
 
-        let view = DCReaderViewBuilder.build(
+        let view = BKReaderViewBuilder.build(
             epub,
             spineIndex: server?.spineIndex ?? book.progress?.spineIndex ?? 0,
             initialCoords: server?.coords ?? book.progress?.kitCoords,

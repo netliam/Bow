@@ -1,21 +1,21 @@
 import BowModel
 import BowSync
-import DCEpubReaderKit
+import BookKit
 import Foundation
 import SwiftData
 
-/// Connects DCEpubReaderKit to Bow's SwiftData store (ADR-0002): positions go to `ReadingProgress` (plus a CFI
+/// Connects BookKit to Bow's SwiftData store (ADR-0002): positions go to `ReadingProgress` (plus a CFI
 /// for Grimmory, ADR-0003) and highlights, notes and bookmarks to `Annotation`. Replaces the kit's JSON store, so
 /// there's one store and one sync queue.
 @MainActor
-final class BowReaderDelegate: DCReaderCoordsProtocol {
+final class BowReaderDelegate: BKReaderCoordsProtocol {
     private let context: ModelContext
     private let bookID: UUID
-    private let epub: DCEpubBook
-    private let converter: DCCFIConverter
+    private let epub: BKEpubBook
+    private let converter: BKCFIConverter
     /// Annotations get their own: a converter holds one chapter at a time, and a position and a highlight
     /// converting at once could each load the other's chapter.
-    private let annotationConverter: DCCFIConverter
+    private let annotationConverter: BKCFIConverter
     private var annotationConversion: Task<String?, Never>?
     /// Called after a change (position, annotation) is saved and queued for the server.
     private let onChangeQueued: () -> Void
@@ -28,14 +28,14 @@ final class BowReaderDelegate: DCReaderCoordsProtocol {
 
     private let sessions: ReadingSessionRecorder
 
-    init(context: ModelContext, bookID: UUID, epub: DCEpubBook, sessions: ReadingSessionRecorder,
+    init(context: ModelContext, bookID: UUID, epub: BKEpubBook, sessions: ReadingSessionRecorder,
          onChangeQueued: @escaping () -> Void) {
         self.context = context
         self.sessions = sessions
         self.bookID = bookID
         self.epub = epub
-        self.converter = DCCFIConverter(book: epub)
-        self.annotationConverter = DCCFIConverter(book: epub)
+        self.converter = BKCFIConverter(book: epub)
+        self.annotationConverter = BKCFIConverter(book: epub)
         self.onChangeQueued = onChangeQueued
     }
 
@@ -46,7 +46,7 @@ final class BowReaderDelegate: DCReaderCoordsProtocol {
 
     // MARK: Position
 
-    func handleCoords(book _: DCEpubBook, spineIndex: Int, coords: String, chapterURL: URL?, isBookMark: Bool) {
+    func handleCoords(book _: BKEpubBook, spineIndex: Int, coords: String, chapterURL: URL?, isBookMark: Bool) {
         // Bookmarks arrive through `save(highlight:)` as `.bookMark` marks; this call is only the position.
         guard !isBookMark, let book else { return }
         // The reader reports where it opened, too. That isn't reading: pushing it would replace a newer
@@ -79,7 +79,7 @@ final class BowReaderDelegate: DCReaderCoordsProtocol {
 
     /// The whole-book fraction, as the reader's progress bar shows it ("11 of 39"). Arrives right after
     /// `handleCoords`, so it's in place before the delayed CFI push reads it.
-    func handleProgress(book _: DCEpubBook, progress readerProgress: DCReaderProgress) {
+    func handleProgress(book _: BKEpubBook, progress readerProgress: BKReaderProgress) {
         sessions.activity(progress: readerProgress.fraction * 100, location: book?.progress?.cfi)
         guard let progress = book?.progress else { return }
         // Until the kit has counted the book's pages, `fraction` is a chapter-based estimate, which can be well off
@@ -100,7 +100,7 @@ final class BowReaderDelegate: DCReaderCoordsProtocol {
 
     // MARK: Highlights, notes, bookmarks
 
-    func save(highlight: DCHighlight) async {
+    func save(highlight: BKHighlight) async {
         guard let book, let id = UUID(uuidString: highlight.uuid) else { return }
         let existing = book.annotations.first { $0.id == id }
         // Grimmory places annotations by CFI. Only a new or moved one needs converting; edits keep theirs.
@@ -143,7 +143,7 @@ final class BowReaderDelegate: DCReaderCoordsProtocol {
         return await task.value
     }
 
-    func deleteHighlight(uuid: String, book _: DCEpubBook) async {
+    func deleteHighlight(uuid: String, book _: BKEpubBook) async {
         guard let id = UUID(uuidString: uuid), let annotation = book?.annotations.first(where: { $0.id == id }) else {
             return
         }
@@ -152,18 +152,18 @@ final class BowReaderDelegate: DCReaderCoordsProtocol {
         onChangeQueued()
     }
 
-    func highlights(for _: DCEpubBook) async -> [DCHighlight]? {
+    func highlights(for _: BKEpubBook) async -> [BKHighlight]? {
         // Annotations from the server whose CFI couldn't be placed in this edition have no coords to draw.
         (book?.annotations ?? []).filter { $0.deletedAt == nil && $0.kitCoords != nil }.map(kitHighlight)
     }
 
-    func highlights(for _: DCEpubBook, chapterId: String) async -> [DCHighlight]? {
+    func highlights(for _: BKEpubBook, chapterId: String) async -> [BKHighlight]? {
         await highlights(for: epub)?.filter { $0.chapterId == chapterId }
     }
 
-    private func kitHighlight(_ annotation: Annotation) -> DCHighlight {
+    private func kitHighlight(_ annotation: Annotation) -> BKHighlight {
         let spineIndex = annotation.spineIndex ?? 0
-        return DCHighlight(
+        return BKHighlight(
             uuid: annotation.id.uuidString,
             bookId: bookID.uuidString,
             chapterId: epub.chapterURL(forSpineIndex: spineIndex)?.lastPathComponent ?? "",
@@ -194,16 +194,16 @@ enum GrimmoryHighlights {
     ]
 
     /// In the web reader's order.
-    static let palettes: [DCHighlightPalette] = [
-        DCHighlightPalette(style: .highlight, colors: highlightColors),
-        DCHighlightPalette(style: .underline, colors: lineColors),
-        DCHighlightPalette(style: .squiggly, colors: lineColors),
-        DCHighlightPalette(style: .strikethrough, colors: lineColors),
+    static let palettes: [BKHighlightPalette] = [
+        BKHighlightPalette(style: .highlight, colors: highlightColors),
+        BKHighlightPalette(style: .underline, colors: lineColors),
+        BKHighlightPalette(style: .squiggly, colors: lineColors),
+        BKHighlightPalette(style: .strikethrough, colors: lineColors),
     ]
 
     /// Grimmory's style names are the kit's raw values; anything unknown draws as a highlight.
-    static func style(_ name: String) -> DCAnnotationStyle {
-        DCAnnotationStyle(rawValue: name) ?? .highlight
+    static func style(_ name: String) -> BKAnnotationStyle {
+        BKAnnotationStyle(rawValue: name) ?? .highlight
     }
 
     /// For annotations stored without a colour: the web reader's first colour for the style.
@@ -211,7 +211,7 @@ enum GrimmoryHighlights {
         (self.style(style) == .highlight ? highlightColors : lineColors)[0].1
     }
 
-    static func kind(_ type: DCHighlight.MarkType) -> Annotation.Kind {
+    static func kind(_ type: BKHighlight.MarkType) -> Annotation.Kind {
         switch type {
         case .highlight: .highlight
         case .note: .note
@@ -219,7 +219,7 @@ enum GrimmoryHighlights {
         }
     }
 
-    static func markType(_ kind: Annotation.Kind) -> DCHighlight.MarkType {
+    static func markType(_ kind: Annotation.Kind) -> BKHighlight.MarkType {
         switch kind {
         case .highlight: .highlight
         case .note: .note

@@ -31,12 +31,13 @@ public enum PDFHighlights {
         return String(decoding: (try? JSONEncoder().encode(values)) ?? Data("[]".utf8), as: UTF8.self)
     }
 
-    /// Adds a highlight to a PDF. `rects` are top-left-origin page rectangles, one per line.
+    /// Adds a highlight to a PDF. `rects` are top-left-origin page rectangles, one per line. `id` becomes the
+    /// EmbedPDF id; by default a new one.
     @discardableResult
     public static func add(to book: Book, page: Int, rects: [CGRect], text: String, color: String,
-                           in context: ModelContext) -> Annotation {
+                           id: String? = nil, in context: ModelContext) -> Annotation {
         let annotation = Annotation(book: book, kind: .highlight, text: text)
-        annotation.cfi = annotation.id.uuidString.lowercased()
+        annotation.cfi = id ?? annotation.id.uuidString.lowercased()
         annotation.spineIndex = page
         annotation.kitCoords = encode(rects)
         annotation.colorHex = color
