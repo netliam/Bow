@@ -204,6 +204,14 @@ actor FakeAnnotationServer: AnnotationRemote {
         #expect(try annotations().isEmpty)
     }
 
+    @Test func aHighlightOnABookGoneFromTheServerIsKept() async throws {
+        _ = try highlight()
+        await server.fail(with: GrimmoryError.notFound)
+
+        #expect(await push().parked == 1)
+        #expect(try annotations().count == 1)
+    }
+
     @Test func bookmarksUseTheBookmarkAPI() async throws {
         let bookmark = Annotation(book: book, kind: .bookmark, text: "")
         bookmark.cfi = "epubcfi(/6/4!/4/10)"

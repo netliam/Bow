@@ -124,8 +124,9 @@ public struct AnnotationSyncer {
                     modelContext.delete(change)
                 }  // Otherwise it changed while sending: the next push sends the new version.
                 result.sent += 1
-            } catch GrimmoryError.notFound where change.operation != .create {
-                // Already gone on the server: deleted there, or by the delete this was retrying.
+            } catch GrimmoryError.notFound where annotation.remoteID != nil {
+                // Already gone on the server: deleted there, or by the delete this was retrying. (A create that
+                // gets a 404 means the book is gone; it's parked below, keeping the highlight here.)
                 modelContext.delete(annotation)
                 modelContext.delete(change)
                 result.sent += 1
