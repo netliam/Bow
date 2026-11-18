@@ -65,9 +65,10 @@ final class BowReaderDelegate: BKReaderCoordsProtocol {
         try? context.save()
 
         cfiTask?.cancel()
-        cfiTask = Task { [weak self] in
+        // Holds what it needs, not `self`: closing the book frees the delegate, and the last page must still go out.
+        cfiTask = Task { [converter, context, bookID, onChangeQueued] in
             try? await Task.sleep(for: Self.cfiDelay)
-            guard let self, !Task.isCancelled else { return }
+            guard !Task.isCancelled else { return }
             if let cfi = await converter.cfi(fromCoords: coords, spineIndex: spineIndex), !Task.isCancelled {
                 progress.cfi = cfi
             }
