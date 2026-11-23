@@ -35,13 +35,13 @@ public actor CatalogSyncer {
             if let remoteID = book.remoteID { existing[remoteID] = book }
         }
 
-        let pendingStatus = BookOutbox.pendingBookIDs(.readStatus, in: modelContext)
-        let pendingRating = BookOutbox.pendingBookIDs(.rating, in: modelContext)
-
         var result = CatalogSyncResult()
         var page = 0
         while true {
             let batch = try await source.books(page: page, pageSize: 50)
+            // Read per page, after the request: a sync takes a while, and an edit made meanwhile must survive.
+            let pendingStatus = BookOutbox.pendingBookIDs(.readStatus, in: modelContext)
+            let pendingRating = BookOutbox.pendingBookIDs(.rating, in: modelContext)
             for summary in batch.items {
                 let hash = Self.hash(summary)
                 if let book = existing[summary.id] {

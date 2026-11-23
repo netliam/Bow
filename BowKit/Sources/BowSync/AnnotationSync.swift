@@ -40,7 +40,7 @@ public enum AnnotationOutbox {
     }
 
     private static func record(_ operation: PendingChange.Operation, for id: UUID, in context: ModelContext) {
-        let change = pending(for: id, in: context) ?? {
+        let change = PendingChange.matching(entityName, id: id, in: context).first ?? {
             let change = PendingChange(entityName: entityName, entityID: id, operation: operation)
             context.insert(change)
             return change
@@ -50,18 +50,6 @@ public enum AnnotationOutbox {
         change.nextAttemptAt = nil
         // A new stamp on every change, so a push that was already sending an older version keeps this one queued.
         change.payload = Data(UUID().uuidString.utf8)
-    }
-
-    static func pending(for id: UUID, in context: ModelContext) -> PendingChange? {
-        let name = entityName
-        let descriptor = FetchDescriptor<PendingChange>(predicate: #Predicate { $0.entityName == name && $0.entityID == id })
-        return try? context.fetch(descriptor).first
-    }
-
-    static func pendingIDs(in context: ModelContext) -> Set<UUID> {
-        let name = entityName
-        let descriptor = FetchDescriptor<PendingChange>(predicate: #Predicate { $0.entityName == name })
-        return Set(((try? context.fetch(descriptor)) ?? []).map(\.entityID))
     }
 }
 
@@ -130,19 +118,12 @@ public struct AnnotationSyncer {
                 modelContext.delete(annotation)
                 modelContext.delete(change)
                 result.sent += 1
-            } catch let error as GrimmoryError where OutboxPusher.isPermanent(error) {
-                change.isParked = true
-                change.lastError = "\(error)"
-                result.parked += 1
             } catch MissingCFI.missing {
                 change.isParked = true
                 change.lastError = "No CFI for this annotation, so Grimmory can't place it."
                 result.parked += 1
             } catch {
-                change.attempts += 1
-                change.lastError = "\(error)"
-                change.nextAttemptAt = now.addingTimeInterval(OutboxPusher.backoff(attempts: change.attempts))
-                result.failed += 1
+                result.count(failure: change, error, now: now)
             }
             try? modelContext.save()
         }
@@ -200,7 +181,7 @@ public struct AnnotationSyncer {
         let remote = try await (server.annotations(bookID: remoteID), server.bookmarks(bookID: remoteID))
 
         // Pending as of now, after the requests: a change made meanwhile is kept too.
-        let pending = AnnotationOutbox.pendingIDs(in: modelContext)
+        let pending = PendingChange.ids(AnnotationOutbox.entityName, in: modelContext)
         var result = PullResult()
         merge(remote.0.map(Incoming.init), into: book, bookmarks: false, pending: pending, result: &result)
         merge(remote.1.map(Incoming.init), into: book, bookmarks: true, pending: pending, result: &result)

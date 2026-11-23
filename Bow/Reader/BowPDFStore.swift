@@ -124,18 +124,3 @@ final class BowPDFStore: BKHighlightStoreProtocol, BKReadingPositionStoreProtoco
         onChange()
     }
 }
-
-extension PDFPage {
-    /// EmbedPDF (Grimmory's web viewer) measures from the crop box's top-left corner, y growing downwards; PDFKit
-    /// from its bottom-left, y growing upwards. Rotated pages aren't handled yet.
-    func embedRect(fromPage rect: CGRect) -> CGRect {
-        let box = bounds(for: .cropBox)
-        return CGRect(x: rect.minX - box.minX, y: box.height - (rect.maxY - box.minY), width: rect.width, height: rect.height)
-    }
-
-    func pageRect(fromEmbed rect: CGRect) -> CGRect {
-        let box = bounds(for: .cropBox)
-        return CGRect(x: box.minX + rect.minX, y: box.minY + box.height - rect.minY - rect.height,
-                      width: rect.width, height: rect.height)
-    }
-}

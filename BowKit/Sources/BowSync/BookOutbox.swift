@@ -24,11 +24,8 @@ public enum BookOutbox {
 
     public static func enqueue(_ kind: Kind, bookID: UUID, in context: ModelContext) {
         let entity = kind.rawValue
-        let descriptor = FetchDescriptor<PendingChange>(
-            predicate: #Predicate { $0.entityName == entity && $0.entityID == bookID }
-        )
         // A newer value un-parks a change the server refused: it may accept this one.
-        for pending in (try? context.fetch(descriptor)) ?? [] {
+        for pending in PendingChange.matching(entity, id: bookID, in: context) {
             pending.isParked = false
             pending.nextAttemptAt = nil
         }
@@ -38,9 +35,7 @@ public enum BookOutbox {
 
     /// Books with an unsent change of `kind`. Catalog sync leaves those fields alone so it can't undo a local edit.
     public static func pendingBookIDs(_ kind: Kind, in context: ModelContext) -> Set<UUID> {
-        let entity = kind.rawValue
-        let descriptor = FetchDescriptor<PendingChange>(predicate: #Predicate { $0.entityName == entity })
-        return Set(((try? context.fetch(descriptor)) ?? []).map(\.entityID))
+        PendingChange.ids(kind.rawValue, in: context)
     }
 }
 
@@ -104,19 +99,9 @@ public actor OutboxPusher {
                 }
                 group.forEach(modelContext.delete)
                 result.sent += 1
-            } catch let error as GrimmoryError where Self.isPermanent(error) {
-                for entry in group {
-                    entry.isParked = true
-                    entry.lastError = "\(error)"
-                }
-                result.parked += 1
             } catch {
-                for entry in group {
-                    entry.attempts += 1
-                    entry.lastError = "\(error)"
-                    entry.nextAttemptAt = now.addingTimeInterval(Self.backoff(attempts: change.attempts))
-                }
-                result.failed += 1
+                let parked = group.map { $0.recordFailure(error, now: now) }.contains(true)
+                if parked { result.parked += 1 } else { result.failed += 1 }
             }
         }
         try? modelContext.save()

@@ -69,9 +69,10 @@ final class BowReaderDelegate: BKReaderCoordsProtocol {
         cfiTask = Task { [converter, context, bookID, onChangeQueued] in
             try? await Task.sleep(for: Self.cfiDelay)
             guard !Task.isCancelled else { return }
-            if let cfi = await converter.cfi(fromCoords: coords, spineIndex: spineIndex), !Task.isCancelled {
-                progress.cfi = cfi
-            }
+            let cfi = await converter.cfi(fromCoords: coords, spineIndex: spineIndex)
+            guard !Task.isCancelled else { return }
+            // Even when nil: an older page's CFI must not go out with this page's chapter and percentage.
+            progress.cfi = cfi
             BookOutbox.enqueue(.progress, bookID: bookID, in: context)
             try? context.save()
             onChangeQueued()

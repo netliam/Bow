@@ -2,6 +2,7 @@ import BowModel
 import CoreGraphics
 import Foundation
 import GrimmoryAPI
+import PDFKit
 import SwiftData
 
 /// Where PDF annotations sync to. `GrimmoryClient` is the real one; tests use a fake.
@@ -69,11 +70,8 @@ public enum PDFHighlights {
     /// sent, so a highlight deleted elsewhere isn't brought back by an unrelated change here.
     static func changed(_ annotation: Annotation, in context: ModelContext) {
         guard let book = annotation.book else { return }
-        let name = entityName
-        let id = book.id
-        let descriptor = FetchDescriptor<PendingChange>(predicate: #Predicate { $0.entityName == name && $0.entityID == id })
-        let change = (try? context.fetch(descriptor).first) ?? {
-            let change = PendingChange(entityName: name, entityID: id, operation: .update)
+        let change = pending(for: book.id, in: context) ?? {
+            let change = PendingChange(entityName: entityName, entityID: book.id, operation: .update)
             context.insert(change)
             return change
         }()
@@ -86,9 +84,7 @@ public enum PDFHighlights {
     }
 
     static func pending(for bookID: UUID, in context: ModelContext) -> PendingChange? {
-        let name = entityName
-        let descriptor = FetchDescriptor<PendingChange>(predicate: #Predicate { $0.entityName == name && $0.entityID == bookID })
-        return try? context.fetch(descriptor).first
+        PendingChange.matching(entityName, id: bookID, in: context).first
     }
 }
 
@@ -196,5 +192,20 @@ public struct PDFAnnotationSyncer {
         guard let id = annotation.cfi, let page = annotation.spineIndex else { return nil }
         return .init(id: id, pageIndex: page, rects: PDFHighlights.rects(of: annotation),
                      color: annotation.colorHex ?? "#FACC15", contents: annotation.note)
+    }
+}
+
+extension PDFPage {
+    /// EmbedPDF (Grimmory's web viewer) measures from the crop box's top-left corner, y growing downwards; PDFKit
+    /// from its bottom-left, y growing upwards. Rotated pages aren't handled yet.
+    public func embedRect(fromPage rect: CGRect) -> CGRect {
+        let box = bounds(for: .cropBox)
+        return CGRect(x: rect.minX - box.minX, y: box.height - (rect.maxY - box.minY), width: rect.width, height: rect.height)
+    }
+
+    public func pageRect(fromEmbed rect: CGRect) -> CGRect {
+        let box = bounds(for: .cropBox)
+        return CGRect(x: box.minX + rect.minX, y: box.minY + box.height - rect.minY - rect.height,
+                      width: rect.width, height: rect.height)
     }
 }

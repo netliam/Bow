@@ -2,6 +2,7 @@ import BowModel
 import CoreGraphics
 import Foundation
 import GrimmoryAPI
+import PDFKit
 import SwiftData
 import Testing
 @testable import BowSync
@@ -49,6 +50,18 @@ private let webDocument = #"""
 
     private func document(_ server: FakePDFAnnotationServer) async -> PDFAnnotationDocument {
         PDFAnnotationDocument(data: await server.data)
+    }
+
+    /// EmbedPDF measures from the crop box's top-left, PDFKit from the page's bottom-left.
+    @Test func rectanglesFlipBetweenTheWebViewerAndPDFKit() {
+        let page = PDFPage()
+        page.setBounds(CGRect(x: 0, y: 0, width: 640, height: 820), for: .mediaBox)
+        page.setBounds(CGRect(x: 20, y: 10, width: 600, height: 800), for: .cropBox)
+        let web = CGRect(x: 50, y: 100, width: 200, height: 12)  // 100 pt below the crop box's top edge.
+
+        let inPage = page.pageRect(fromEmbed: web)
+        #expect(inPage == CGRect(x: 70, y: 698, width: 200, height: 12))
+        #expect(page.embedRect(fromPage: inPage) == web)
     }
 
     @Test func pullsTheWebViewersHighlights() async throws {

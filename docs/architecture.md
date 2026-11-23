@@ -7,7 +7,7 @@ It can also connect to a **Grimmory** server: it mirrors your library, keeps cho
 progress, annotations, shelves and metadata both ways. The goal is that the Grimmory web app can do almost nothing
 that Bow can't.
 
-EPUB rendering is handled by **DCEpubReaderKit** (fork: `github.com/netliam/DCEpubReaderKit`).
+Reading (EPUB and PDF) is handled by **BookKit** (`github.com/netliam/BookKit`, formerly DCEpubReaderKit).
 
 > Grimmory details below were checked against its source (`grimmory-tools/grimmory` @ `c80ce81`, 2026-11-11).
 > Endpoints, payloads and gotchas are in [grimmory-api.md](grimmory-api.md).
@@ -19,7 +19,7 @@ EPUB rendering is handled by **DCEpubReaderKit** (fork: `github.com/netliam/DCEp
 1. **Local-first.** The on-device database is the source of truth for the UI. The network only feeds it.
    Every screen works offline.
 2. **Server optional.** "No server" is a supported mode. Grimmory is an *account* the user adds.
-3. **Reader-agnostic app.** The library, sync and UI never import DCEpubReaderKit directly. They go through one
+3. **Reader-agnostic app.** The library, sync and UI never import BookKit directly. They go through one
    small `ReaderAdapter` boundary so PDF/comics and kit changes stay isolated.
 4. **Outbox for writes.** Every user change (progress, highlight, rating, shelf edit) is written locally first,
    with a pending-sync record next to it. A sync engine pushes those records when it can.
@@ -38,7 +38,7 @@ Bow (app target, SwiftUI)            ← screens, navigation, platform glue
      ├─ GrimmoryAPI     ← HTTP client, auth, DTOs. No SwiftData, no UI. Pure + testable.
      ├─ BowSync         ← SyncEngine: pull catalog, push outbox, download manager, conflict rules
      ├─ BowLibrary      ← local import, file storage, cover cache, search index
-     └─ BowReaders      ← ReaderAdapter protocol + EPUB (DCEpubReaderKit), PDF (PDFKit), CBZ (later)
+     └─ BowReaders      ← ReaderAdapter protocol + EPUB and PDF (BookKit), CBZ (later)
 ```
 
 Dependency direction: `App → BowReaders/BowSync/BowLibrary → BowModel`, `BowSync → GrimmoryAPI`.
@@ -92,7 +92,7 @@ Dependency direction: `App → BowReaders/BowSync/BowLibrary → BowModel`, `Bow
   - **Background refresh:** a `BGAppRefreshTask` (`app.bow.refresh`, about hourly) pushes changes, then
     refreshes the catalog.
 - **Not done yet:**
-  - PDF and comics show a "not supported yet" message.
+  - Comics show a "not supported yet" message.
   - Annotations sync both ways (Phase 2).
   - Background tasks need a real bundle ID and a signed build to run on a device.
 - `BowReaders` isn't needed yet: the EPUB adapter lives in the app, because the kit is iOS/Catalyst-only and would
@@ -132,7 +132,7 @@ The generated code lives in `GrimmoryAPI/Generated` and is committed. Regenerate
 | `ReadStatus`, `Rating` | per book | Small user-state fields, synced. |
 | `PendingChange` | id, entity, entityId, op, payload, attempts, lastError | The outbox. |
 
-`DCEpubBook.uniqueIdentifier` (from the OPF) is **not** used as Bow's book key. Two server books can share an OPF
+`BKEpubBook.uniqueIdentifier` (from the OPF) is **not** used as Bow's book key. Two server books can share an OPF
 id, and some books have none. The reader adapter maps Bow's `Book.id` ⇄ the kit's `bookId`.
 
 ---
@@ -160,7 +160,7 @@ Every feature is gated by the user's Grimmory **permissions** (`/app/users/me`).
 | Series / authors | `/app/series`, `/app/authors` | Native | 2 |
 | Annotations | `/annotations`, `/bookmarks`, `/v2/book-notes`, `/app/notebook` | Two-way highlights, notes and bookmarks, plus a Notebook screen | 2 |
 | Live updates | STOMP `/ws` queues | Foreground subscription | 2 |
-| PDF | `/pdf-annotations` | PDFKit reader | 2 |
+| PDF | `/pdf-annotations` | BookKit PDF reader | 2 |
 | Metadata edit | `/books/{id}/metadata`, `/metadata/prospective`, ISBN lookup, covers | Native editor (`canEditMetadata`) | 3 |
 | Upload / Bookdrop | `/files` upload, `/bookdrop/*` | Share sheet + Files import (`canUpload`, `canAccessBookdrop`) | 3 |
 | Send by email | `/email/book/{id}` | Share menu (`canEmailBook`) | 3 |
@@ -213,20 +213,19 @@ protocol ReaderAdapter {
 // ReaderEvents: progressChanged(Locator, percentage), annotationSaved, annotationDeleted
 ```
 
-- **EPUB:** `EpubAdapter` implements `DCHighlightStoreProtocol` + `DCReadingPositionStoreProtocol`, backed by
-  SwiftData, behind `DCStoreReaderDelegate(store:bookId:)`. It does **not** use `DCJSONReaderStore`, so there's one
-  store and one outbox. It passes a `DCReaderConfiguration` (as of kit `0.1.0`) with Bow's `bookId`, `onClose`
-  (closes the Mac reader window), and `onOpenExternalURL`. At sync time it converts positions and highlights with
-  `DCCFIConverter`.
-- **PDF:** `PDFKit` (`PDFView`), which works natively on iOS and macOS. Its locator is the page index plus a
-  selection range.
+- **EPUB:** `BowReaderDelegate` (`BKReaderCoordsProtocol`) stores positions and highlights in SwiftData. It does
+  **not** use `BKJSONReaderStore`, so there's one store and one outbox. It passes a `BKReaderConfiguration` with
+  Bow's `bookId`, `onClose` (closes the Mac reader window) and Grimmory's highlight palettes. Positions and
+  highlights are converted to CFIs with `BKCFIConverter`.
+- **PDF:** BookKit's PDF reader (`BKPDFReaderViewBuilder`), fed by `BowPDFStore`: highlights are `Annotation`s
+  synced to Grimmory's web viewer, the position is the page. Bookmarks stay in BookKit's own store.
 - **Reader preferences:** the kit stores them in `UserDefaults.standard`. Fine for now, and it could later move
   to an iCloud key-value store to sync themes across devices.
 
 ### Changes needed in the fork
 
-Bow needs changes in DCEpubReaderKit itself. They're tracked separately in
-[dcepubreaderkit-changes.md](dcepubreaderkit-changes.md), so work on the kit doesn't get mixed up with work on Bow.
+Bow needs changes in BookKit itself. They're tracked separately in
+[bookkit-changes.md](bookkit-changes.md), so work on the kit doesn't get mixed up with work on Bow.
 
 ---
 
@@ -247,7 +246,7 @@ Bow needs changes in DCEpubReaderKit itself. They're tracked separately in
 | # | Issue found | Status |
 |---|---|---|
 | 1 | The package rule `1.0.0..<2.0.0` matched no tag (the fork had none) | ✅ Pinned to `0.1.0` up to next minor (`0.1.x`). Pre-1.0 minor bumps may break the API. |
-| 2 | The `DCEpubReaderKit` product wasn't linked to the `Bow` target | ✅ Linked |
+| 2 | The `DCEpubReaderKit` (now BookKit) product wasn't linked to the `Bow` target | ✅ Linked |
 | 3 | The kit is iOS-only, but Bow targeted native `macosx` | ✅ iPhone + iPad + Mac Catalyst (`TARGETED_DEVICE_FAMILY 1,2,6`) |
 | 4 | visionOS (`xros`) was in `SUPPORTED_PLATFORMS` | ✅ Removed |
 | 5 | No outgoing-network entitlement for the sandboxed Mac build | ✅ `ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES` (only checked once a signed build exists) |
