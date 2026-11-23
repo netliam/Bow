@@ -15,6 +15,7 @@ struct BookDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(LibrarySync.self) private var librarySync
     @Environment(DownloadCenter.self) private var downloads
+    @Environment(LocalImporter.self) private var importer
     @State private var detail: GrimmoryBookDetail?
     @State private var readerBook: Book?
     @State private var openWhenDownloaded = false
@@ -274,7 +275,7 @@ struct BookDetailView: View {
 
     private var statusBinding: Binding<GrimmoryReadStatus> {
         Binding {
-            book.readStatus.flatMap(GrimmoryReadStatus.init(rawValue:)) ?? .unset
+            book.status
         } set: { status in
             book.readStatus = status == .unset ? nil : status.rawValue
             queue(.readStatus)
@@ -287,9 +288,7 @@ struct BookDetailView: View {
     }
 
     private func queue(_ kind: BookOutbox.Kind) {
-        BookOutbox.enqueue(kind, bookID: book.id, in: modelContext)
-        try? modelContext.save()
-        Task { await librarySync.pushChanges(modelContext.container) }
+        librarySync.queue(kind, for: book, in: modelContext)
     }
 
     private func loadDetail() async {
@@ -300,9 +299,7 @@ struct BookDetailView: View {
     }
 
     private func deleteLocalBook() {
-        BookStorage.standard.removeFiles(for: book.id)
-        modelContext.delete(book)
-        try? modelContext.save()
+        importer.delete(book)
         dismiss()
     }
 

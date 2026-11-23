@@ -31,6 +31,13 @@ final class LocalImporter {
         }
     }
 
+    /// Deletes an imported book and its file. It's the only copy.
+    func delete(_ book: Book) {
+        storage.removeFiles(for: book.id)
+        context.delete(book)
+        try? context.save()
+    }
+
     private struct Metadata: Sendable {
         var title: String?
         var authors: [String]
