@@ -1,5 +1,7 @@
 import BowLibrary
 import BowModel
+import BowSync
+import GrimmoryAPI
 import SwiftData
 import SwiftUI
 
@@ -270,26 +272,88 @@ struct LibraryContent<Header: View>: View {
     }
 }
 
-/// Books as a grid of covers, each opening its detail page, with download actions in the context menu.
+/// What a library tile shows under its cover. Chosen in Settings (the Accounts sheet).
+enum LibraryTileStyle: String, CaseIterable {
+    /// Title, author and a small progress ring.
+    case detailed
+    /// Only the progress or status, and a menu of actions.
+    case compact
+
+    static let storageKey = "libraryTileStyle"
+
+    var title: String {
+        switch self {
+        case .detailed: "Title and Author"
+        case .compact: "Cover Only"
+        }
+    }
+}
+
+/// Books as a grid of covers, each opening its detail page, with the book's actions in the context menu (and, for
+/// cover-only tiles, a "⋯" button).
 struct BookGrid: View {
     let books: [Book]
     /// Shows "Book 2" under each title, for a series.
     var showsSeriesNumber = false
     @Environment(DownloadCenter.self) private var downloads
+    @Environment(LibrarySync.self) private var librarySync
+    @Environment(LocalImporter.self) private var importer
+    @Environment(\.modelContext) private var modelContext
+    @AppStorage(LibraryTileStyle.storageKey) private var style: LibraryTileStyle = .detailed
+    @State private var bookToDelete: Book?
 
     var body: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 120, maximum: 180), spacing: 20)], spacing: 24) {
             ForEach(books) { book in
-                NavigationLink(value: book) { BookTile(book: book, showsSeriesNumber: showsSeriesNumber) }
+                VStack(alignment: .leading, spacing: 6) {
+                    NavigationLink(value: book) {
+                        BookTile(book: book, showsSeriesNumber: showsSeriesNumber, style: style)
+                    }
                     .buttonStyle(.plain)
-                    .contextMenu { downloadMenu(for: book) }
+                    .contextMenu { menu(for: book) }
+                    if style == .compact {
+                        // Outside the link, so the menu button doesn't open the book.
+                        HStack {
+                            Text(book.tileStatus)
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(.secondary)
+                            Spacer(minLength: 0)
+                            Menu("Actions for \(book.title)", systemImage: "ellipsis") { menu(for: book) }
+                                .labelStyle(.iconOnly)
+                                .font(.callout.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                                .frame(minWidth: 32, minHeight: 28, alignment: .trailing)
+                                .contentShape(.rect)
+                        }
+                    }
+                }
             }
         }
         .padding()
+        .confirmationDialog("Delete \(bookToDelete?.title ?? "") from this device?",
+                            isPresented: .init(get: { bookToDelete != nil }, set: { if !$0 { bookToDelete = nil } }),
+                            titleVisibility: .visible) {
+            Button("Delete", role: .destructive) {
+                if let book = bookToDelete { importer.delete(book) }
+            }
+        } message: {
+            Text("This can't be undone.")
+        }
     }
 
-    @ViewBuilder private func downloadMenu(for book: Book) -> some View {
-        if let file = book.readableFile, book.account?.kind != .local {
+    @ViewBuilder private func menu(for book: Book) -> some View {
+        Picker("Status", systemImage: "bookmark", selection: Binding {
+            book.status
+        } set: { status in
+            book.readStatus = status == .unset ? nil : status.rawValue
+            librarySync.queue(.readStatus, for: book, in: modelContext)
+        }) {
+            ForEach(GrimmoryReadStatus.allCases, id: \.self) { Text($0.title).tag($0) }
+        }
+        .pickerStyle(.menu)
+        if book.account?.kind == .local {
+            Button("Delete from Library", systemImage: "trash", role: .destructive) { bookToDelete = book }
+        } else if let file = book.readableFile {
             switch file.downloadState {
             case .downloaded:
                 Button("Remove Download", systemImage: "trash") { downloads.removeDownload(file) }
@@ -303,44 +367,66 @@ struct BookGrid: View {
             }
         }
     }
+}
 
+extension Book {
+    var status: GrimmoryReadStatus { readStatus.flatMap(GrimmoryReadStatus.init(rawValue:)) ?? .unset }
+
+    /// Under a cover-only tile: how far along, or else the status.
+    var tileStatus: String {
+        if isInProgress, let fraction = progress?.fraction, fraction > 0 { return fraction.formatted(.percent.precision(.fractionLength(0))) }
+        if status != .unset { return status.title }
+        return (progress?.fraction ?? 0) > 0 ? "Read" : "New"
+    }
 }
 
 private struct BookTile: View {
     let book: Book
     var showsSeriesNumber = false
+    var style: LibraryTileStyle = .detailed
     @Environment(DownloadCenter.self) private var downloads
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        let tile = VStack(alignment: .leading, spacing: 6) {
             CoverView(book: book)
                 .overlay(alignment: .bottomTrailing) { downloadBadge.padding(6) }
-            if showsSeriesNumber, let number = book.seriesNumber {
-                Text("Book \(number.formatted())")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-            }
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(book.title)
-                    .font(.subheadline.weight(.medium))
-                    .lineLimit(2)
-                Spacer(minLength: 0)
-                if let fraction = book.progress?.fraction, fraction > 0 {
-                    ProgressRing(fraction: fraction, lineWidth: 2)
-                        .frame(width: 14, height: 14)
-                        .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 4 }
-                }
-            }
-            if let author = book.authors.first {
-                Text(author)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+            if style == .detailed {
+                details
             }
         }
         .contentShape(.rect)
-        .accessibilityElement(children: .combine)
-        .accessibilityHint(accessibilityHint)
+        if style == .detailed {
+            tile.accessibilityElement(children: .combine).accessibilityHint(accessibilityHint)
+        } else {
+            // No title on screen, so name the book for VoiceOver (the status beside it reads on its own).
+            tile.accessibilityElement(children: .ignore).accessibilityLabel(book.title).accessibilityHint(accessibilityHint)
+        }
+    }
+
+    /// Always the same height (two title lines, one author line), so covers in a row line up; longer text is cut
+    /// off with "…".
+    @ViewBuilder private var details: some View {
+        if showsSeriesNumber {
+            Text(book.seriesNumber.map { "Book \($0.formatted())" } ?? " ")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        }
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Text(book.title)
+                .font(.subheadline.weight(.medium))
+                .lineLimit(2, reservesSpace: true)
+            Spacer(minLength: 0)
+            if let fraction = book.progress?.fraction, fraction > 0 {
+                ProgressRing(fraction: fraction, lineWidth: 2)
+                    .frame(width: 14, height: 14)
+                    .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 4 }
+            }
+        }
+        Text(book.authors.first ?? " ")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
     }
 
     private var file: BookFile? { book.readableFile }

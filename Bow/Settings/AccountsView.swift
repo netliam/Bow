@@ -13,6 +13,7 @@ struct AccountsView: View {
     @Environment(LibrarySync.self) private var librarySync
     @Query(sort: \Account.createdAt) private var accounts: [Account]
     @State private var accountToRemove: Account?
+    @AppStorage(LibraryTileStyle.storageKey) private var tileStyle: LibraryTileStyle = .detailed
 
     var body: some View {
         NavigationStack {
@@ -55,6 +56,17 @@ struct AccountsView: View {
                             symbol: "arrow.triangle.2.circlepath", color: .indigo)
                     }
                     .disabled(librarySync.isSyncing)
+                }
+                Section {
+                    Picker(selection: $tileStyle) {
+                        ForEach(LibraryTileStyle.allCases, id: \.self) { Text($0.title).tag($0) }
+                    } label: {
+                        Row(title: "Book Tiles", symbol: "square.grid.2x2", color: .teal)
+                    }
+                } header: {
+                    Text("Library")
+                } footer: {
+                    Text("Cover Only shows each book's progress or status, with its actions in a ⋯ menu.")
                 }
             }
             .tint(.primary)  // Rows read as list items, not links; Remove keeps its own red.

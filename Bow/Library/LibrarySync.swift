@@ -33,6 +33,13 @@ final class LibrarySync {
         _ = await ReadingSessionPusher(modelContainer: container).pushPending(to: { destinations[$0] })
     }
 
+    /// Saves a change to a book's status or rating and sends it.
+    func queue(_ kind: BookOutbox.Kind, for book: Book, in context: ModelContext) {
+        BookOutbox.enqueue(kind, bookID: book.id, in: context)
+        try? context.save()
+        Task { await pushChanges(context.container) }
+    }
+
     func syncAll(_ container: ModelContainer) async {
         guard !isSyncing else { return }
         isSyncing = true
