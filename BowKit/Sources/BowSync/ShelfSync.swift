@@ -28,7 +28,7 @@ public enum ShelfOutbox {
         guard shelf.kind == .regular, book.shelves.contains(where: { $0.id == shelf.id }) != isOn else { return }
         if isOn { book.shelves.append(shelf) } else { book.shelves.removeAll { $0.id == shelf.id } }
 
-        let change = pending(for: book.id, in: context) ?? {
+        let change = PendingChange.matching(entityName, id: book.id, in: context).first ?? {
             let change = PendingChange(entityName: entityName, entityID: book.id, operation: .update)
             context.insert(change)
             return change
@@ -43,18 +43,6 @@ public enum ShelfOutbox {
         change.payload = try? JSONEncoder().encode(delta)
         change.isParked = false
         change.nextAttemptAt = nil
-    }
-
-    static func pending(for bookID: UUID, in context: ModelContext) -> PendingChange? {
-        let name = entityName
-        let descriptor = FetchDescriptor<PendingChange>(predicate: #Predicate { $0.entityName == name && $0.entityID == bookID })
-        return try? context.fetch(descriptor).first
-    }
-
-    static func pendingBookIDs(in context: ModelContext) -> Set<UUID> {
-        let name = entityName
-        let descriptor = FetchDescriptor<PendingChange>(predicate: #Predicate { $0.entityName == name })
-        return Set(((try? context.fetch(descriptor)) ?? []).map(\.entityID))
     }
 }
 
@@ -90,7 +78,7 @@ public struct ShelfSyncer {
 
         let booksByRemoteID = Dictionary(account.books.compactMap { book in book.remoteID.map { ($0, book) } },
                                          uniquingKeysWith: { first, _ in first })
-        let pending = ShelfOutbox.pendingBookIDs(in: modelContext)
+        let pending = PendingChange.ids(ShelfOutbox.entityName, in: modelContext)
         var local = Dictionary(account.shelves.map { (Key($0.kind, $0.remoteID), $0) }, uniquingKeysWith: { first, _ in first })
         var result = PullResult()
 
@@ -164,15 +152,8 @@ public struct ShelfSyncer {
                 try await server.assignShelves(bookIDs: [remoteID], add: delta.add.sorted(), remove: delta.remove.sorted())
                 if change.payload == payload { modelContext.delete(change) }  // Else it changed while sending.
                 result.sent += 1
-            } catch let error as GrimmoryError where OutboxPusher.isPermanent(error) {
-                change.isParked = true
-                change.lastError = "\(error)"
-                result.parked += 1
             } catch {
-                change.attempts += 1
-                change.lastError = "\(error)"
-                change.nextAttemptAt = now.addingTimeInterval(OutboxPusher.backoff(attempts: change.attempts))
-                result.failed += 1
+                result.count(failure: change, error, now: now)
             }
             try? modelContext.save()
         }

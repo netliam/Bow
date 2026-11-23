@@ -1,4 +1,6 @@
-# DCEpubReaderKit — changes Bow needs
+# BookKit — changes Bow needs
+
+> BookKit was called DCEpubReaderKit when these were written; its types are now prefixed `BK` instead of `DC`.
 
 **Date:** 2026-11-11 · **For:** whoever is working on the DCEpubReaderKit fork
 

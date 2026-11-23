@@ -47,6 +47,7 @@ final class LibrarySync {
 
         await pushChanges(container)
         let accounts = (try? container.mainContext.fetch(FetchDescriptor<Account>())) ?? []
+        problem = nil  // Once, so one server's success doesn't hide another's problem.
         for account in accounts {
             guard let client = GrimmoryAccounts.client(for: account) else { continue }
             do {
@@ -54,7 +55,6 @@ final class LibrarySync {
                 // After the catalog, so the books shelves point at exist. In the main context, where the detail
                 // page changes a book's shelves (see `ShelfSyncer`).
                 _ = try await ShelfSyncer(context: container.mainContext).pull(accountID: account.id, from: client)
-                problem = nil
             } catch GrimmoryError.signedOut {
                 problem = "You've been signed out of \(account.displayName). Remove the server and add it again to sign back in."
             } catch GrimmoryError.webPageInsteadOfAPI {

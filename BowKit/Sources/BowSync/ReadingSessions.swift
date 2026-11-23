@@ -111,15 +111,8 @@ public actor ReadingSessionPusher {
                 try await server.record(queued.session)
                 modelContext.delete(change)
                 result.sent += 1
-            } catch let error as GrimmoryError where OutboxPusher.isPermanent(error) {
-                change.isParked = true
-                change.lastError = "\(error)"
-                result.parked += 1
             } catch {
-                change.attempts += 1
-                change.lastError = "\(error)"
-                change.nextAttemptAt = now.addingTimeInterval(OutboxPusher.backoff(attempts: change.attempts))
-                result.failed += 1
+                result.count(failure: change, error, now: now)
             }
         }
         try? modelContext.save()

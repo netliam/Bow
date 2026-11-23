@@ -296,9 +296,7 @@ struct BookGrid: View {
     /// Shows "Book 2" under each title, for a series.
     var showsSeriesNumber = false
     @Environment(DownloadCenter.self) private var downloads
-    @Environment(LibrarySync.self) private var librarySync
     @Environment(LocalImporter.self) private var importer
-    @Environment(\.modelContext) private var modelContext
     @AppStorage(LibraryTileStyle.storageKey) private var style: LibraryTileStyle = .detailed
     @State private var bookToDelete: Book?
 
@@ -342,15 +340,7 @@ struct BookGrid: View {
     }
 
     @ViewBuilder private func menu(for book: Book) -> some View {
-        Picker("Status", systemImage: "bookmark", selection: Binding {
-            book.status
-        } set: { status in
-            book.readStatus = status == .unset ? nil : status.rawValue
-            librarySync.queue(.readStatus, for: book, in: modelContext)
-        }) {
-            ForEach(GrimmoryReadStatus.allCases, id: \.self) { Text($0.title).tag($0) }
-        }
-        .pickerStyle(.menu)
+        StatusPicker(book: book)
         if book.account?.kind == .local {
             Button("Delete from Library", systemImage: "trash", role: .destructive) { bookToDelete = book }
         } else if let file = book.readableFile {
@@ -366,6 +356,25 @@ struct BookGrid: View {
                 Button("Try Again", systemImage: "arrow.clockwise") { downloads.download(file) }
             }
         }
+    }
+}
+
+/// A book's read status as a menu, saved and sent when it changes. On the book page and in the book menu.
+struct StatusPicker: View {
+    let book: Book
+    @Environment(LibrarySync.self) private var librarySync
+    @Environment(\.modelContext) private var modelContext
+
+    var body: some View {
+        Picker("Status", systemImage: "bookmark", selection: Binding {
+            book.status
+        } set: { status in
+            book.readStatus = status == .unset ? nil : status.rawValue
+            librarySync.queue(.readStatus, for: book, in: modelContext)
+        }) {
+            ForEach(GrimmoryReadStatus.allCases, id: \.self) { Text($0.title).tag($0) }
+        }
+        .pickerStyle(.menu)
     }
 }
 

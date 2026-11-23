@@ -145,12 +145,7 @@ struct BookDetailView: View {
 
     private var statusAndRating: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Picker("Status", selection: statusBinding) {
-                ForEach(GrimmoryReadStatus.allCases, id: \.self) { status in
-                    Text(status.title).tag(status)
-                }
-            }
-            .pickerStyle(.menu)
+            StatusPicker(book: book)
 
             shelvesRow
 
@@ -270,15 +265,6 @@ struct BookDetailView: View {
             openWindow(id: ReaderWindow.id, value: book.id)
         } else {
             readerBook = book
-        }
-    }
-
-    private var statusBinding: Binding<GrimmoryReadStatus> {
-        Binding {
-            book.status
-        } set: { status in
-            book.readStatus = status == .unset ? nil : status.rawValue
-            queue(.readStatus)
         }
     }
 

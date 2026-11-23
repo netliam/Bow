@@ -189,17 +189,8 @@ struct ReaderScreen: View {
             openPDF(url, at: local ?? 0)
             return
         }
-        let fetched = await withTaskGroup(of: GrimmoryPDFProgress??.self) { group in
-            group.addTask { try? await client.pdfProgress(bookID: remoteID) }
-            group.addTask {
-                try? await Task.sleep(for: .seconds(3))
-                return .some(nil)
-            }
-            let first = await group.next() ?? nil
-            group.cancelAll()
-            return first ?? nil
-        }
-        guard let server = fetched, server.page >= 1, server.page - 1 != local else {
+        let fetched = await withTimeout(3) { try await client.pdfProgress(bookID: remoteID) }
+        guard let server = fetched ?? nil, server.page >= 1, server.page - 1 != local else {
             openPDF(url, at: local ?? 0)
             return
         }
@@ -222,16 +213,10 @@ struct ReaderScreen: View {
         else { return }
         let syncer = PDFAnnotationSyncer(context: modelContext)
         let bookID = book.id
-        let work = Task {
+        await withTimeout(4) {
             try? await syncer.push(bookID: bookID, to: client)
             try await syncer.pull(bookID: bookID, from: client)
         }
-        let timeout = Task {
-            try await Task.sleep(for: .seconds(4))
-            work.cancel()
-        }
-        _ = try? await work.value
-        timeout.cancel()
     }
 
     /// The position Grimmory has, if it's newer than this device's and somewhere else. Gives up after a few
@@ -241,17 +226,8 @@ struct ReaderScreen: View {
               let client = GrimmoryAccounts.client(for: account)
         else { return nil }
 
-        let fetched = await withTaskGroup(of: GrimmoryEpubProgress??.self) { group in
-            group.addTask { try? await client.epubProgress(bookID: remoteID) }
-            group.addTask {
-                try? await Task.sleep(for: .seconds(3))
-                return .some(nil)
-            }
-            let first = await group.next() ?? nil
-            group.cancelAll()
-            return first ?? nil
-        }
-        guard let server = fetched, let cfi = server.cfi, cfi != book.progress?.cfi else { return nil }
+        let fetched = await withTimeout(3) { try await client.epubProgress(bookID: remoteID) }
+        guard let server = fetched ?? nil, let cfi = server.cfi, cfi != book.progress?.cfi else { return nil }
 
         // This device's own pushes also move the server's `lastReadTime`, a few seconds after the position
         // changed here, so require a clear margin.
@@ -268,13 +244,7 @@ struct ReaderScreen: View {
         if book.remoteID != nil, let account = book.account, let client = GrimmoryAccounts.client(for: account) {
             let syncer = AnnotationSyncer(context: modelContext)
             let bookID = book.id
-            let pull = Task { try await syncer.pull(bookID: bookID, from: client) }
-            let timeout = Task {
-                try await Task.sleep(for: .seconds(4))
-                pull.cancel()
-            }
-            _ = try? await pull.value
-            timeout.cancel()
+            await withTimeout(4) { try await syncer.pull(bookID: bookID, from: client) }
         }
 
         let unplaced = book.annotations.filter { $0.deletedAt == nil && $0.kitCoords == nil && $0.cfi != nil }
@@ -286,6 +256,19 @@ struct ReaderScreen: View {
             annotation.spineIndex = place.spineIndex
         }
         try? modelContext.save()
+    }
+
+    /// `work`'s result, or nil if it fails or takes longer than `seconds` (it's cancelled then). A slow or
+    /// unreachable server must never keep a downloaded book from opening.
+    @discardableResult
+    private func withTimeout<T: Sendable>(_ seconds: Double, _ work: @escaping @MainActor () async throws -> T) async -> T? {
+        let task = Task { try await work() }
+        let timer = Task {
+            try await Task.sleep(for: .seconds(seconds))
+            task.cancel()
+        }
+        defer { timer.cancel() }
+        return try? await task.value
     }
 
     private func start(_ epub: BKEpubBook, at server: ServerPosition?) {
